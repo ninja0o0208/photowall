@@ -3,23 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>活動管理後台 - 中和陳怡君</title>
+    <title>SADMIN 管理後台 - 中和陳怡君</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         body { margin: 0; padding: 0; font-family: '微軟正黑體', sans-serif; display: flex; height: 100vh; background: #f4f7f6; overflow: hidden; }
         
         /* 左側列表管理區 */
-        #sidebar { width: 420px; height: 100%; overflow-y: auto; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.1); z-index: 1002; display: flex; flex-direction: column; transition: 0.3s; }
+        #sidebar { width: 400px; height: 100%; overflow-y: auto; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.1); z-index: 100; display: flex; flex-direction: column; transition: 0.3s; }
         .sidebar-header { padding: 15px; background: #fff; border-bottom: 2px solid #00C1B6; position: sticky; top: 0; z-index: 10; }
         
         /* 地圖區 */
         #map { flex: 1; height: 100%; z-index: 1; }
 
         /* 活動卡片樣式 */
-        .activity-card { border: 2px solid #eee; margin: 12px; padding: 12px; border-radius: 12px; background: #fff; transition: 0.3s; cursor: pointer; }
+        .activity-card { border: 2px solid #eee; margin: 12px; padding: 12px; border-radius: 12px; background: #fff; cursor: pointer; }
         .activity-card.active { border-color: #00C1B6; background: #f0fdfa; }
-        .card-header { display: flex; justify-content: space-between; margin-bottom: 5px; }
+        .card-header { display: flex; justify-content: space-between; margin-bottom: 5px; align-items: center; }
         .card-title { font-weight: bold; color: #333; font-size: 15px; }
         
         /* 照片管理縮圖 */
@@ -30,15 +30,19 @@
 
         /* 按鈕樣式 */
         .btn-group { display: flex; gap: 5px; margin-top: 8px; flex-wrap: wrap; }
-        .btn { padding: 6px 10px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; flex: 1; text-align: center; }
+        .btn { padding: 8px 10px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; flex: 1; text-align: center; }
         .btn-edit { background: #e0f2f1; color: #00796b; }
         .btn-del { background: #ffebee; color: #c62828; }
         .btn-add-photo { background: #fff3e0; color: #e65100; position: relative; }
         .btn-add-photo input { position: absolute; left: 0; top: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
 
-        /* 修正：浮動活動篩選面板 (支援手機拖動) */
-        #filterWrapper { position: absolute; top: 15px; right: 15px; z-index: 1001; touch-action: none; }
-        #filterPanel { background: rgba(255, 255, 255, 0.95); padding: 12px; border-radius: 12px; width: 200px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); border: 1px solid #ddd; }
+        /* ✨ 關鍵修正：浮動篩選面板 (確保 z-index 最高) */
+        #filterWrapper { position: absolute; top: 15px; right: 15px; z-index: 2000; touch-action: none; }
+        #filterPanel { 
+            background: rgba(255, 255, 255, 0.98); 
+            padding: 12px; border-radius: 12px; width: 200px; 
+            box-shadow: 0 4px 25px rgba(0,0,0,0.2); border: 1px solid #ddd; 
+        }
         .drag-handle { cursor: move; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 6px; margin-bottom: 8px; color: #00C1B6; font-weight: bold; font-size: 14px; }
         .toggle-btn { cursor: pointer; border: none; background: #00C1B6; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; }
         .filter-content.hidden { display: none; }
@@ -46,16 +50,16 @@
         .filter-item label { font-size: 11px; color: #777; font-weight: bold; display: block; margin-bottom: 2px; }
         select, input[type="text"] { width: 100%; padding: 6px; border-radius: 5px; border: 1px solid #ddd; font-size: 13px; box-sizing: border-box; }
 
-        /* 手機版 RWD 調整 */
+        /* 手機版排版調整 */
         @media (max-width: 768px) {
             body { flex-direction: column; }
-            #sidebar { width: 100%; height: 40vh; }
+            #sidebar { width: 100%; height: 45vh; }
             #map { flex: 1; }
             #filterPanel { width: 160px; }
         }
 
-        /* 編輯視窗 */
-        #editModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center; }
+        /* 編輯 Modal */
+        #editModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 3000; justify-content: center; align-items: center; }
         .modal-body { background: white; padding: 20px; border-radius: 15px; width: 320px; }
     </style>
 </head>
@@ -63,10 +67,10 @@
 
 <div id="sidebar">
     <div class="sidebar-header">
-        <h3 style="margin:0;">🛠️ SADMIN 後台總覽</h3>
-        <div style="font-size: 11px; color: #888;">點擊活動後，直接在地圖點擊即可「更新位置」。</div>
+        <h3 style="margin:0;">🛠️ SADMIN 後台</h3>
+        <div style="font-size: 11px; color: #888;">先選活動卡片，再點地圖更新位置。</div>
     </div>
-    <div id="activityList">資料同步中...</div>
+    <div id="activityList">資料載入中...</div>
 </div>
 
 <div id="map"></div>
@@ -78,8 +82,8 @@
             <button class="toggle-btn" id="toggleBtn" onclick="toggleFilter()">隱藏</button>
         </div>
         <div class="filter-content" id="filterContent">
-            <div class="filter-item"><label>關鍵字</label><input type="text" id="searchName" placeholder="搜尋名稱..."></div>
-            <div class="filter-item"><label>日期(月份)</label><select id="filterMonth"><option value="all">所有月份</option></select></div>
+            <div class="filter-item"><label>名稱</label><input type="text" id="searchName" placeholder="搜尋..."></div>
+            <div class="filter-item"><label>月份</label><select id="filterMonth"><option value="all">所有月份</option></select></div>
             <div class="filter-item">
                 <label>分區</label>
                 <select id="filterDist">
@@ -95,7 +99,7 @@
 
 <div id="editModal">
     <div class="modal-body">
-        <h3 style="margin-top:0;">✏️ 修改資訊</h3>
+        <h3 style="margin-top:0;">✏️ 修改活動資訊</h3>
         <input type="hidden" id="editId">
         <label style="font-size:12px;">名稱</label><input type="text" id="editName">
         <label style="font-size:12px;">日期</label><input type="date" id="editDate">
@@ -124,18 +128,18 @@
 
     let allData = [], markers = {}, selectedId = null;
 
-    // --- 修正 1: 增加觸控拖動 (Touch Events) ---
+    // ✨ 修正：增加手機觸控支援
     const wrapper = document.getElementById('filterWrapper');
     const handle = document.getElementById('dragHandle');
     let isMoving = false, offset = [0,0];
 
-    const startDrag = (e) => {
+    const start = (e) => {
         isMoving = true;
         const x = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
         const y = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
         offset = [wrapper.offsetLeft - x, wrapper.offsetTop - y];
     };
-    const moveDrag = (e) => {
+    const move = (e) => {
         if(!isMoving) return;
         const x = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
         const y = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
@@ -143,10 +147,10 @@
         wrapper.style.top = (y + offset[1]) + 'px';
         wrapper.style.right = 'auto';
     };
-    handle.addEventListener('mousedown', startDrag);
-    handle.addEventListener('touchstart', startDrag);
-    document.addEventListener('mousemove', moveDrag);
-    document.addEventListener('touchmove', moveDrag, {passive: false});
+    handle.addEventListener('mousedown', start);
+    handle.addEventListener('touchstart', start);
+    document.addEventListener('mousemove', move);
+    document.addEventListener('touchmove', move, {passive: false});
     document.addEventListener('mouseup', () => isMoving = false);
     document.addEventListener('touchend', () => isMoving = false);
 
@@ -157,9 +161,9 @@
         btn.innerText = content.classList.contains('hidden') ? "展開" : "隱藏";
     };
 
-    // 手機預設隱藏
-    if(window.innerWidth < 600) toggleFilter();
+    if(window.innerWidth < 600) toggleFilter(); // 手機版預設收起
 
+    // --- 資料同步邏輯 ---
     async function loadAll() {
         const snap = await getDocs(query(collection(db, "yichun_activities"), orderBy("activityDate", "desc")));
         allData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -194,7 +198,7 @@
                 card.onclick = () => { selectedId = d.id; render(); map.flyTo([d.lat, d.lng], 17); m.openPopup(); };
                 let photos = (d.photos || []).map(url => `<div class="admin-photo-item"><img src="${url}"><div class="photo-del-btn" onclick="delPhoto('${d.id}', '${url}')">×</div></div>`).join('');
                 card.innerHTML = `
-                    <div class="card-header"><span class="card-title">${d.activityName}</span><span style="font-size:12px; color:#999;">${d.activityDate}</span></div>
+                    <div class="card-header"><span class="card-title">${d.activityName}</span><span style="font-size:11px; color:#999;">${d.activityDate}</span></div>
                     <div style="font-size:11px; color:#666;">📍 ${d.district || ''}${d.village || ''}</div>
                     <div class="admin-photo-grid">${photos}</div>
                     <div class="btn-group">
@@ -207,7 +211,7 @@
         });
     }
 
-    // --- 核心功能 (補傳/位置更新/刪除) ---
+    // --- 功能函式 (壓縮/補傳/更新座標/刪除) ---
     const compress = (file) => new Promise(res => {
         const reader = new FileReader(); reader.readAsDataURL(file);
         reader.onload = e => {
@@ -237,7 +241,7 @@
     };
 
     map.on('click', async (e) => {
-        if (!selectedId) return alert("請先點擊左側卡片。");
+        if (!selectedId) return alert("請先在左邊選活動卡片。");
         if (confirm(`修改位置？`)) {
             const { lat, lng } = e.latlng;
             const res = await fetch(`https://api.nlsc.gov.tw/other/TownVillagePointQuery/${lng}/${lat}`);
@@ -245,7 +249,7 @@
             let dist = "中和";
             if(village) { const snap = await getDoc(doc(db, "chief_data", village)); if(snap.exists()) dist = snap.data().district || "中和"; }
             await updateDoc(doc(db, "yichun_activities", selectedId), { lat, lng, district: dist, village: village || "" });
-            alert("📍 更新成功！"); loadAll();
+            alert("📍 位置已更新！"); loadAll();
         }
     });
 

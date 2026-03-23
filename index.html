@@ -10,18 +10,16 @@
         body { margin: 0; padding: 0; font-family: '微軟正黑體', sans-serif; height: 100vh; overflow: hidden; background: #f8f9fa; }
         #map { width: 100%; height: 100%; z-index: 1; }
 
-        /* 修正 2: 標題不換行且自適應大小 */
+        /* 標題不換行、手機自適應 */
         #pageTitle {
             position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
             z-index: 1000; background: rgba(255, 255, 255, 0.95); padding: 8px 25px;
             border-radius: 50px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             font-size: 18px; font-weight: bold; color: #00C1B6; border: 1px solid #e0f2f1;
-            white-space: nowrap; /* 強制不換行 */
-            pointer-events: none; backdrop-filter: blur(5px);
-            transition: 0.3s;
+            white-space: nowrap; pointer-events: none; backdrop-filter: blur(5px);
         }
 
-        /* 修正 1: 篩選面板優化 */
+        /* 篩選面板：支援手機拖動 */
         #filterWrapper { position: absolute; top: 15px; right: 15px; z-index: 1001; touch-action: none; }
         #filterPanel {
             background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
@@ -32,33 +30,39 @@
         .toggle-btn { cursor: pointer; border: none; background: #00C1B6; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; }
         .filter-content.hidden { display: none; }
         .filter-item { margin-bottom: 6px; }
-        .filter-item label { font-size: 11px; font-weight: bold; color: #666; display: block; margin-bottom: 2px; }
+        .filter-item label { font-size: 11px; font-weight: bold; color: #666; display: block; }
         select, input { width: 100%; padding: 6px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px; outline: none; box-sizing: border-box; }
 
-        /* 手機版特別調整 */
-        @media (max-width: 600px) {
-            #pageTitle { font-size: 14px; padding: 6px 15px; bottom: 20px; } /* 縮小標題防止擠壓 */
-            #filterPanel { width: 160px; } /* 縮小面板寬度 */
-            .photo-stack-container { height: 180px; } /* 手機照片牆稍微縮小 */
-            .stack-photo { width: 120px; height: 120px; margin-left: -60px; }
-        }
-
-        /* 相片座標與標籤 */
+        /* 照片座標標籤 */
         .photo-marker { display: flex; flex-direction: column; align-items: center; }
         .marker-label { background: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2); white-space: nowrap; margin-bottom: 3px; border: 1px solid #00C1B6; }
-        .marker-photo-wrap { width: 38px; height: 38px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3); overflow: hidden; background: #f0f0f0; }
+        .marker-photo-wrap { width: 38px; height: 38px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3); overflow: hidden; }
         .marker-photo-wrap img { width: 100%; height: 100%; object-fit: cover; }
 
-        /* 彈窗 UI */
+        /* 彈窗 UI 與 標題置頂 */
         .popup-info-top { font-size: 11px; color: #999; margin-bottom: 3px; }
-        .popup-header-top { position: relative; z-index: 1010; background: rgba(255,255,255,0.9); padding: 4px 8px; border-radius: 5px; margin-bottom: -15px; font-size: 16px; font-weight: bold; color: #333; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .popup-header-top { 
+            position: relative; z-index: 1010; 
+            background: rgba(255,255,255,0.9); padding: 4px 8px; 
+            border-radius: 5px; margin-bottom: -15px; 
+            font-size: 16px; font-weight: bold; color: #333; 
+        }
+
+        /* 照片牆 */
         .photo-stack-container { position: relative; width: 100%; height: 210px; margin: 30px auto 10px; perspective: 1000px; z-index: 100; }
         .stack-photo { position: absolute; width: 140px; height: 140px; object-fit: cover; border: 4px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.15); left: 50%; margin-left: -70px; transition: all 0.5s ease; cursor: pointer; }
         .stack-photo.active { transform: scale(1.1) !important; z-index: 500 !important; }
 
-        /* 燈箱 */
-        #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; justify-content: center; align-items: center; }
-        #lightbox img { max-width: 90%; max-height: 80%; border: 4px solid white; border-radius: 4px; }
+        /* 功能按鈕補回 */
+        .popup-btn { display: inline-flex; align-items: center; justify-content: center; padding: 8px 18px; border-radius: 20px; font-weight: bold; font-size: 13px; margin: 10px 4px 0; cursor: pointer; border: none; box-shadow: 0 2px 5px rgba(0,0,0,0.1); background: #00C1B6; color: white; text-decoration: none; }
+        .btn-video { background: #FF85A1; }
+        .btn-zoom { background: #FFC107; color: #333; }
+
+        /* 燈箱與手機適應 */
+        @media (max-width: 600px) {
+            #pageTitle { font-size: 14px; padding: 6px 15px; bottom: 20px; }
+            #filterPanel { width: 160px; }
+        }
     </style>
 </head>
 <body>
@@ -72,7 +76,7 @@
             <button class="toggle-btn" id="toggleBtn" onclick="toggleFilter()">隱藏</button>
         </div>
         <div class="filter-content" id="filterContent">
-            <div class="filter-item"><input type="text" id="searchName" placeholder="搜尋關鍵字..."></div>
+            <div class="filter-item"><input type="text" id="searchName" placeholder="關鍵字搜尋..."></div>
             <div class="filter-item"><select id="filterMonth"><option value="all">所有月份</option></select></div>
             <div class="filter-item">
                 <select id="filterDist">
@@ -86,7 +90,7 @@
 </div>
 
 <div id="map"></div>
-<div id="lightbox" onclick="closeLightbox(event)"><img id="lightboxImg" onclick="nextLightboxPhoto(event)"></div>
+<div id="lightbox" onclick="this.style.display='none'"><img id="lightboxImg" style="max-width:90%; max-height:80%; border:4px solid white;"></div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
@@ -100,37 +104,20 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    let markers = {}, allActivities = [], currentPhotoList = [], currentPhotoIdx = 0, cycleTimer = null, resumeTimer = null, stackIdx = 0;
+    let markers = {}, allActivities = [], cycleTimer = null, resumeTimer = null, stackIdx = 0;
 
-    // 初始化地圖 (清淡底色)
     var map = L.map('map', { zoomControl: false }).setView([24.993, 121.496], 14);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
 
-    // --- 修正 1: 增加觸控拖動支援 ---
+    // --- 拖動支援 (電腦與手機) ---
     const wrapper = document.getElementById('filterWrapper');
     const handle = document.getElementById('dragHandle');
     let isMoving = false, offset = [0,0];
-
-    const startDrag = (e) => {
-        isMoving = true;
-        const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
-        const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
-        offset = [wrapper.offsetLeft - clientX, wrapper.offsetTop - clientY];
-    };
-    const moveDrag = (e) => {
-        if(!isMoving) return;
-        const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
-        const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
-        wrapper.style.left = (clientX + offset[0]) + 'px';
-        wrapper.style.top = (clientY + offset[1]) + 'px';
-        wrapper.style.right = 'auto';
-    };
-    handle.addEventListener('mousedown', startDrag);
-    handle.addEventListener('touchstart', startDrag, {passive: false});
-    document.addEventListener('mousemove', moveDrag);
-    document.addEventListener('touchmove', moveDrag, {passive: false});
-    document.addEventListener('mouseup', () => isMoving = false);
-    document.addEventListener('touchend', () => isMoving = false);
+    const start = (e) => { isMoving = true; const x = e.type.includes('touch') ? e.touches[0].clientX : e.clientX; const y = e.type.includes('touch') ? e.touches[0].clientY : e.clientY; offset = [wrapper.offsetLeft - x, wrapper.offsetTop - y]; };
+    const move = (e) => { if(!isMoving) return; const x = e.type.includes('touch') ? e.touches[0].clientX : e.clientX; const y = e.type.includes('touch') ? e.touches[0].clientY : e.clientY; wrapper.style.left = (x + offset[0]) + 'px'; wrapper.style.top = (y + offset[1]) + 'px'; wrapper.style.right = 'auto'; };
+    handle.addEventListener('mousedown', start); handle.addEventListener('touchstart', start);
+    document.addEventListener('mousemove', move); document.addEventListener('touchmove', move, {passive: false});
+    document.addEventListener('mouseup', () => isMoving = false); document.addEventListener('touchend', () => isMoving = false);
 
     window.toggleFilter = () => {
         const content = document.getElementById('filterContent');
@@ -139,10 +126,7 @@
         btn.innerText = content.classList.contains('hidden') ? "展開" : "隱藏";
     };
 
-    // 手機版預設隱藏
-    if(window.innerWidth < 600) toggleFilter();
-
-    // --- 照片輪播與 Scramble 特效 ---
+    // --- 特效邏輯 ---
     window.scramblePhotos = function(id) {
         stopCycle();
         const container = document.getElementById(`stack-${id}`), photos = container.querySelectorAll('.stack-photo');
@@ -161,42 +145,21 @@
     function startCycle(container) {
         stopCycle(); const photos = Array.from(container.querySelectorAll('.stack-photo'));
         if (photos.length < 2) return;
-        cycleTimer = setInterval(() => { 
-            photos.forEach(p => p.classList.remove('active'));
-            stackIdx = (stackIdx + 1) % photos.length; 
-            photos[stackIdx].classList.add('active');
-        }, 2000);
+        cycleTimer = setInterval(() => { photos.forEach(p => p.classList.remove('active')); stackIdx = (stackIdx + 1) % photos.length; photos[stackIdx].classList.add('active'); }, 2000);
     }
     function stopCycle() { if(cycleTimer) clearInterval(cycleTimer); }
 
-    // --- 燈箱功能 ---
-    window.openLightbox = (photosJson) => {
-        currentPhotoList = JSON.parse(decodeURIComponent(photosJson));
-        currentPhotoIdx = 0; updateLightbox();
-        document.getElementById('lightbox').style.display = 'flex';
-    };
-    window.nextLightboxPhoto = (e) => { e.stopPropagation(); currentPhotoIdx = (currentPhotoIdx + 1) % currentPhotoList.length; updateLightbox(); };
-    window.closeLightbox = (e) => { if (e.target.id === "lightbox") document.getElementById('lightbox').style.display = 'none'; };
-    function updateLightbox() { document.getElementById('lightboxImg').src = currentPhotoList[currentPhotoIdx]; }
-
-    // --- 資料載入與篩選 ---
-    function updateMonthFilter(data) {
-        const select = document.getElementById('filterMonth');
-        const months = new Set();
-        data.forEach(d => { if (d.activityDate) months.add(d.activityDate.substring(0, 7)); });
-        const sorted = Array.from(months).sort().reverse();
-        select.innerHTML = '<option value="all">所有月份</option>';
-        sorted.forEach(m => {
-            const opt = document.createElement('option');
-            opt.value = m; opt.text = `${m.split('-')[0]}年${m.split('-')[1]}月`;
-            select.add(opt);
-        });
-    }
-
+    // --- 資料加載 ---
     async function load() {
         const snap = await getDocs(query(collection(db, "yichun_activities"), orderBy("activityDate", "desc")));
         allActivities = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        updateMonthFilter(allActivities);
+        const monthSelect = document.getElementById('filterMonth');
+        const months = new Set();
+        allActivities.forEach(d => { if (d.activityDate) months.add(d.activityDate.substring(0, 7)); });
+        Array.from(months).sort().reverse().forEach(m => {
+            const opt = document.createElement('option'); opt.value = m; opt.text = `${m.split('-')[0]}年${m.split('-')[1]}月`;
+            monthSelect.add(opt);
+        });
         apply();
     }
 
@@ -226,14 +189,15 @@
                         <div class="popup-info-top">${d.activityDate} | ${d.district}${d.village}</div>
                         <div class="popup-header-top">${d.activityName}</div>
                         ${gallery}
-                        <button class="popup-btn" style="background:#00C1B6; color:white; border:none; padding:8px 20px; border-radius:20px; font-weight:bold; cursor:pointer;" onclick="openLightbox('${encodeURIComponent(JSON.stringify(d.photos))}')">🔍 放大檢視</button>
+                        <div style="display:flex; justify-content:center; gap:5px;">
+                            <button class="popup-btn" onclick="alert('📸 相簿載入中...')">🖼️ 相簿</button>
+                            <button class="popup-btn btn-video" onclick="alert('🎥 影片載入中...')">🎥 影片</button>
+                            <button class="popup-btn btn-zoom" onclick="document.getElementById('lightboxImg').src='${d.photos[0]}'; document.getElementById('lightbox').style.display='flex';">🔍 放大</button>
+                        </div>
                     </div>`;
 
                 const m = L.marker([d.lat, d.lng], { icon: icon }).addTo(map).bindPopup(popup);
-                m.on('popupopen', () => { 
-                    map.panTo([d.lat + 0.002, d.lng]); 
-                    stackIdx = 0; startCycle(document.getElementById(`stack-${d.id}`)); 
-                });
+                m.on('popupopen', () => { map.panTo([d.lat + 0.002, d.lng]); stackIdx = 0; startCycle(document.getElementById(`stack-${d.id}`)); });
                 m.on('popupclose', stopCycle);
                 markers[d.id] = m;
             }
