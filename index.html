@@ -10,7 +10,7 @@
         body { margin: 0; padding: 0; font-family: '微軟正黑體', sans-serif; height: 100vh; overflow: hidden; background: #f8f9fa; }
         #map { width: 100%; height: 100%; z-index: 1; }
 
-        /* 標題不換行、手機自適應 */
+        /* 底部標題 */
         #pageTitle {
             position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
             z-index: 1000; background: rgba(255, 255, 255, 0.95); padding: 8px 25px;
@@ -19,11 +19,10 @@
             white-space: nowrap; pointer-events: none; backdrop-filter: blur(5px);
         }
 
-        /* 篩選面板：支援手機拖動 */
+        /* 篩選面板 */
         #filterWrapper { position: absolute; top: 15px; right: 15px; z-index: 1001; touch-action: none; }
         #filterPanel {
-            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
-            padding: 10px; border-radius: 12px; width: 200px;
+            background: rgba(255, 255, 255, 0.95); padding: 10px; border-radius: 12px; width: 200px;
             box-shadow: 0 8px 25px rgba(0,0,0,0.15); border: 1px solid #ddd;
         }
         .drag-handle { cursor: move; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 6px; margin-bottom: 8px; color: #00C1B6; font-weight: bold; font-size: 14px; }
@@ -31,34 +30,38 @@
         .filter-content.hidden { display: none; }
         .filter-item { margin-bottom: 6px; }
         .filter-item label { font-size: 11px; font-weight: bold; color: #666; display: block; }
-        select, input { width: 100%; padding: 6px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px; outline: none; box-sizing: border-box; }
+        select, input { width: 100%; padding: 6px; border-radius: 6px; border: 1px solid #ddd; font-size: 13px; outline: none; }
 
-        /* 照片座標標籤 */
+        /* 相片座標 */
         .photo-marker { display: flex; flex-direction: column; align-items: center; }
         .marker-label { background: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2); white-space: nowrap; margin-bottom: 3px; border: 1px solid #00C1B6; }
         .marker-photo-wrap { width: 38px; height: 38px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3); overflow: hidden; }
         .marker-photo-wrap img { width: 100%; height: 100%; object-fit: cover; }
 
-        /* 彈窗 UI 與 標題置頂 */
+        /* 彈窗樣式與標題置頂 */
         .popup-info-top { font-size: 11px; color: #999; margin-bottom: 3px; }
-        .popup-header-top { 
-            position: relative; z-index: 1010; 
-            background: rgba(255,255,255,0.9); padding: 4px 8px; 
-            border-radius: 5px; margin-bottom: -15px; 
-            font-size: 16px; font-weight: bold; color: #333; 
-        }
-
+        .popup-header-top { position: relative; z-index: 1010; background: rgba(255,255,255,0.9); padding: 4px 8px; border-radius: 5px; margin-bottom: -15px; font-size: 16px; font-weight: bold; color: #333; }
+        
         /* 照片牆 */
         .photo-stack-container { position: relative; width: 100%; height: 210px; margin: 30px auto 10px; perspective: 1000px; z-index: 100; }
         .stack-photo { position: absolute; width: 140px; height: 140px; object-fit: cover; border: 4px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.15); left: 50%; margin-left: -70px; transition: all 0.5s ease; cursor: pointer; }
         .stack-photo.active { transform: scale(1.1) !important; z-index: 500 !important; }
 
-        /* 功能按鈕補回 */
-        .popup-btn { display: inline-flex; align-items: center; justify-content: center; padding: 8px 18px; border-radius: 20px; font-weight: bold; font-size: 13px; margin: 10px 4px 0; cursor: pointer; border: none; box-shadow: 0 2px 5px rgba(0,0,0,0.1); background: #00C1B6; color: white; text-decoration: none; }
+        /* 功能按鈕 */
+        .popup-btn-wrap { display: flex; justify-content: center; gap: 5px; margin-top: 10px; }
+        .popup-btn { padding: 8px 15px; border-radius: 20px; font-weight: bold; font-size: 13px; cursor: pointer; border: none; background: #00C1B6; color: white; }
         .btn-video { background: #FF85A1; }
         .btn-zoom { background: #FFC107; color: #333; }
 
-        /* 燈箱與手機適應 */
+        /* 彩蛋 */
+        #eggOverlay { display: none; position: fixed; top:0; left:0; width:100vw; height:100vh; z-index:10000; flex-direction:column; justify-content:center; align-items:center; pointer-events:none; }
+        .confetti { position: absolute; top: -10vh; font-size: 32px; animation: fall linear forwards; }
+        @keyframes fall { 0% { transform: translateY(0) rotate(0deg); opacity: 1; } 100% { transform: translateY(115vh) rotate(360deg); opacity: 0; } }
+
+        /* 放大燈箱修復 */
+        #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.92); z-index: 9999; justify-content: center; align-items: center; cursor: pointer; }
+        #lightbox img { max-width: 85%; max-height: 85%; border: 5px solid white; border-radius: 5px; cursor: default; }
+
         @media (max-width: 600px) {
             #pageTitle { font-size: 14px; padding: 6px 15px; bottom: 20px; }
             #filterPanel { width: 160px; }
@@ -90,7 +93,11 @@
 </div>
 
 <div id="map"></div>
-<div id="lightbox" onclick="this.style.display='none'"><img id="lightboxImg" style="max-width:90%; max-height:80%; border:4px solid white;"></div>
+<div id="eggOverlay"><h1 style="color:#FF4081; font-size:50px; text-shadow: 0 0 10px white;">✨ 幸福怡起拚 ✨</h1></div>
+
+<div id="lightbox" onclick="closeLightbox(event)">
+    <img id="lightboxImg" onclick="nextLightboxPhoto(event)">
+</div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
@@ -104,7 +111,7 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    let markers = {}, allActivities = [], cycleTimer = null, resumeTimer = null, stackIdx = 0;
+    let markers = {}, allActivities = [], scrambleCount = 0, currentPhotoList = [], currentPhotoIdx = 0, cycleTimer = null, resumeTimer = null, stackIdx = 0;
 
     var map = L.map('map', { zoomControl: false }).setView([24.993, 121.496], 14);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
@@ -113,10 +120,10 @@
     const wrapper = document.getElementById('filterWrapper');
     const handle = document.getElementById('dragHandle');
     let isMoving = false, offset = [0,0];
-    const start = (e) => { isMoving = true; const x = e.type.includes('touch') ? e.touches[0].clientX : e.clientX; const y = e.type.includes('touch') ? e.touches[0].clientY : e.clientY; offset = [wrapper.offsetLeft - x, wrapper.offsetTop - y]; };
-    const move = (e) => { if(!isMoving) return; const x = e.type.includes('touch') ? e.touches[0].clientX : e.clientX; const y = e.type.includes('touch') ? e.touches[0].clientY : e.clientY; wrapper.style.left = (x + offset[0]) + 'px'; wrapper.style.top = (y + offset[1]) + 'px'; wrapper.style.right = 'auto'; };
-    handle.addEventListener('mousedown', start); handle.addEventListener('touchstart', start);
-    document.addEventListener('mousemove', move); document.addEventListener('touchmove', move, {passive: false});
+    const startDrag = (e) => { isMoving = true; const x = e.type.includes('touch') ? e.touches[0].clientX : e.clientX; const y = e.type.includes('touch') ? e.touches[0].clientY : e.clientY; offset = [wrapper.offsetLeft - x, wrapper.offsetTop - y]; };
+    const moveDrag = (e) => { if(!isMoving) return; const x = e.type.includes('touch') ? e.touches[0].clientX : e.clientX; const y = e.type.includes('touch') ? e.touches[0].clientY : e.clientY; wrapper.style.left = (x + offset[0]) + 'px'; wrapper.style.top = (y + offset[1]) + 'px'; wrapper.style.right = 'auto'; };
+    handle.addEventListener('mousedown', startDrag); handle.addEventListener('touchstart', startDrag);
+    document.addEventListener('mousemove', moveDrag); document.addEventListener('touchmove', moveDrag, {passive: false});
     document.addEventListener('mouseup', () => isMoving = false); document.addEventListener('touchend', () => isMoving = false);
 
     window.toggleFilter = () => {
@@ -126,8 +133,28 @@
         btn.innerText = content.classList.contains('hidden') ? "展開" : "隱藏";
     };
 
-    // --- 特效邏輯 ---
+    // --- 修正：放大功能 (掛載至 window 確保抓得到) ---
+    window.openLightbox = (photosJson) => {
+        currentPhotoList = JSON.parse(decodeURIComponent(photosJson));
+        currentPhotoIdx = 0;
+        document.getElementById('lightboxImg').src = currentPhotoList[currentPhotoIdx];
+        document.getElementById('lightbox').style.display = 'flex';
+    };
+
+    window.nextLightboxPhoto = (e) => {
+        e.stopPropagation();
+        currentPhotoIdx = (currentPhotoIdx + 1) % currentPhotoList.length;
+        document.getElementById('lightboxImg').src = currentPhotoList[currentPhotoIdx];
+    };
+
+    window.closeLightbox = (e) => {
+        if (e.target.id === "lightbox") document.getElementById('lightbox').style.display = 'none';
+    };
+
+    // --- 修正：弄亂與彩蛋邏輯 ---
     window.scramblePhotos = function(id) {
+        scrambleCount++; 
+        triggerEgg(); // 檢查是否掉落彩蛋
         stopCycle();
         const container = document.getElementById(`stack-${id}`), photos = container.querySelectorAll('.stack-photo');
         photos.forEach(p => {
@@ -149,7 +176,22 @@
     }
     function stopCycle() { if(cycleTimer) clearInterval(cycleTimer); }
 
-    // --- 資料加載 ---
+    function triggerEgg() {
+        if(scrambleCount % 10 !== 0) return;
+        const overlay = document.getElementById('eggOverlay');
+        overlay.style.display = 'flex';
+        const spawn = () => {
+            for(let i=0; i<35; i++) {
+                const c = document.createElement('div'); c.className = 'confetti'; 
+                c.innerHTML = ['💖','✨','🌸','🎀'][Math.floor(Math.random()*4)];
+                c.style.left = Math.random()*100+'vw'; c.style.animationDuration = (Math.random()*3+2.5)+'s';
+                overlay.appendChild(c);
+            }
+        };
+        spawn(); setTimeout(spawn, 2200);
+        setTimeout(() => { overlay.style.display = 'none'; }, 5000);
+    }
+
     async function load() {
         const snap = await getDocs(query(collection(db, "yichun_activities"), orderBy("activityDate", "desc")));
         allActivities = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -189,10 +231,10 @@
                         <div class="popup-info-top">${d.activityDate} | ${d.district}${d.village}</div>
                         <div class="popup-header-top">${d.activityName}</div>
                         ${gallery}
-                        <div style="display:flex; justify-content:center; gap:5px;">
+                        <div class="popup-btn-wrap">
                             <button class="popup-btn" onclick="alert('📸 相簿載入中...')">🖼️ 相簿</button>
                             <button class="popup-btn btn-video" onclick="alert('🎥 影片載入中...')">🎥 影片</button>
-                            <button class="popup-btn btn-zoom" onclick="document.getElementById('lightboxImg').src='${d.photos[0]}'; document.getElementById('lightbox').style.display='flex';">🔍 放大</button>
+                            <button class="popup-btn btn-zoom" onclick="openLightbox('${encodeURIComponent(JSON.stringify(d.photos))}')">🔍 放大</button>
                         </div>
                     </div>`;
 
