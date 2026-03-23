@@ -2,62 +2,71 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>活動管理後台 - 中和陳怡君</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         body { margin: 0; padding: 0; font-family: '微軟正黑體', sans-serif; display: flex; height: 100vh; background: #f4f7f6; overflow: hidden; }
         
-        /* 左側列表 */
-        #sidebar { width: 420px; height: 100%; overflow-y: auto; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.1); z-index: 1002; display: flex; flex-direction: column; }
-        .sidebar-header { padding: 20px; background: #fff; border-bottom: 2px solid #00C1B6; position: sticky; top: 0; z-index: 10; }
+        /* 左側列表管理區 */
+        #sidebar { width: 420px; height: 100%; overflow-y: auto; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.1); z-index: 1002; display: flex; flex-direction: column; transition: 0.3s; }
+        .sidebar-header { padding: 15px; background: #fff; border-bottom: 2px solid #00C1B6; position: sticky; top: 0; z-index: 10; }
         
+        /* 地圖區 */
         #map { flex: 1; height: 100%; z-index: 1; }
 
-        /* 活動卡片 */
-        .activity-card { border: 2px solid #eee; margin: 15px; padding: 15px; border-radius: 12px; background: #fff; transition: 0.3s; cursor: pointer; }
+        /* 活動卡片樣式 */
+        .activity-card { border: 2px solid #eee; margin: 12px; padding: 12px; border-radius: 12px; background: #fff; transition: 0.3s; cursor: pointer; }
         .activity-card.active { border-color: #00C1B6; background: #f0fdfa; }
-        .card-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
-        .card-title { font-weight: bold; color: #333; font-size: 16px; }
+        .card-header { display: flex; justify-content: space-between; margin-bottom: 5px; }
+        .card-title { font-weight: bold; color: #333; font-size: 15px; }
         
-        /* 照片管理 */
-        .admin-photo-grid { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
-        .admin-photo-item { position: relative; width: 70px; height: 70px; border-radius: 6px; overflow: hidden; border: 1px solid #ddd; }
+        /* 照片管理縮圖 */
+        .admin-photo-grid { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
+        .admin-photo-item { position: relative; width: 60px; height: 60px; border-radius: 5px; overflow: hidden; border: 1px solid #ddd; }
         .admin-photo-item img { width: 100%; height: 100%; object-fit: cover; }
-        .photo-del-btn { position: absolute; top: 0; right: 0; background: red; color: white; width: 20px; height: 20px; text-align: center; line-height: 18px; font-size: 14px; cursor: pointer; font-weight: bold; border-radius: 0 0 0 5px; }
+        .photo-del-btn { position: absolute; top: 0; right: 0; background: red; color: white; width: 18px; height: 18px; text-align: center; line-height: 16px; font-size: 12px; cursor: pointer; font-weight: bold; border-radius: 0 0 0 5px; }
 
-        /* 功能按鈕 */
-        .btn-group { display: flex; gap: 5px; margin-top: 10px; flex-wrap: wrap; }
-        .btn { padding: 8px 10px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; flex: 1; text-align: center; }
+        /* 按鈕樣式 */
+        .btn-group { display: flex; gap: 5px; margin-top: 8px; flex-wrap: wrap; }
+        .btn { padding: 6px 10px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; flex: 1; text-align: center; }
         .btn-edit { background: #e0f2f1; color: #00796b; }
         .btn-del { background: #ffebee; color: #c62828; }
         .btn-add-photo { background: #fff3e0; color: #e65100; position: relative; }
         .btn-add-photo input { position: absolute; left: 0; top: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
 
-        /* 浮動活動篩選面板 */
-        #filterWrapper { position: absolute; top: 20px; right: 20px; z-index: 1001; }
-        #filterPanel { background: rgba(255, 255, 255, 0.95); padding: 15px; border-radius: 12px; width: 220px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); border: 1px solid #ddd; }
-        .drag-handle { cursor: move; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 10px; color: #00C1B6; font-weight: bold; }
+        /* 修正：浮動活動篩選面板 (支援手機拖動) */
+        #filterWrapper { position: absolute; top: 15px; right: 15px; z-index: 1001; touch-action: none; }
+        #filterPanel { background: rgba(255, 255, 255, 0.95); padding: 12px; border-radius: 12px; width: 200px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); border: 1px solid #ddd; }
+        .drag-handle { cursor: move; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 6px; margin-bottom: 8px; color: #00C1B6; font-weight: bold; font-size: 14px; }
         .toggle-btn { cursor: pointer; border: none; background: #00C1B6; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; }
         .filter-content.hidden { display: none; }
         .filter-item { margin-bottom: 8px; }
-        .filter-item label { font-size: 11px; color: #777; font-weight: bold; display: block; }
-        select, input[type="text"] { width: 100%; padding: 7px; border-radius: 5px; border: 1px solid #ddd; font-size: 13px; box-sizing: border-box; }
+        .filter-item label { font-size: 11px; color: #777; font-weight: bold; display: block; margin-bottom: 2px; }
+        select, input[type="text"] { width: 100%; padding: 6px; border-radius: 5px; border: 1px solid #ddd; font-size: 13px; box-sizing: border-box; }
 
-        /* 修改視窗 */
+        /* 手機版 RWD 調整 */
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            #sidebar { width: 100%; height: 40vh; }
+            #map { flex: 1; }
+            #filterPanel { width: 160px; }
+        }
+
+        /* 編輯視窗 */
         #editModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center; }
-        .modal-body { background: white; padding: 25px; border-radius: 15px; width: 350px; }
+        .modal-body { background: white; padding: 20px; border-radius: 15px; width: 320px; }
     </style>
 </head>
 <body>
 
 <div id="sidebar">
     <div class="sidebar-header">
-        <h2 style="margin:0;">🛠️ 活動管理總覽</h2>
-        <div style="font-size: 12px; color: #888; margin-top: 5px;">點擊活動後，可直接點地圖修改座標。</div>
+        <h3 style="margin:0;">🛠️ SADMIN 後台總覽</h3>
+        <div style="font-size: 11px; color: #888;">點擊活動後，直接在地圖點擊即可「更新位置」。</div>
     </div>
-    <div id="activityList">正在同步資料...</div>
+    <div id="activityList">資料同步中...</div>
 </div>
 
 <div id="map"></div>
@@ -66,10 +75,10 @@
     <div id="filterPanel">
         <div class="drag-handle" id="dragHandle">
             <span>活動篩選</span>
-            <button class="toggle-btn" onclick="toggleFilter()">隱藏</button>
+            <button class="toggle-btn" id="toggleBtn" onclick="toggleFilter()">隱藏</button>
         </div>
         <div class="filter-content" id="filterContent">
-            <div class="filter-item"><label>活動名稱</label><input type="text" id="searchName" placeholder="搜尋關鍵字..."></div>
+            <div class="filter-item"><label>關鍵字</label><input type="text" id="searchName" placeholder="搜尋名稱..."></div>
             <div class="filter-item"><label>日期(月份)</label><select id="filterMonth"><option value="all">所有月份</option></select></div>
             <div class="filter-item">
                 <label>分區</label>
@@ -79,21 +88,19 @@
                     <option value="南勢">南勢分區</option><option value="秀安">秀安分區</option>
                 </select>
             </div>
-            <button class="btn btn-edit" onclick="location.href='input.html'" style="width:100%; margin-top:10px;">＋ 建立新活動</button>
+            <button class="btn btn-edit" onclick="location.href='input.html'" style="width:100%; margin-top:5px;">＋ 建立新活動</button>
         </div>
     </div>
 </div>
 
 <div id="editModal">
     <div class="modal-body">
-        <h3 style="margin-top:0;">✏️ 修改活動內容</h3>
+        <h3 style="margin-top:0;">✏️ 修改資訊</h3>
         <input type="hidden" id="editId">
-        <label style="font-size:12px;">活動名稱</label>
-        <input type="text" id="editName">
-        <label style="font-size:12px;">活動日期</label>
-        <input type="date" id="editDate">
+        <label style="font-size:12px;">名稱</label><input type="text" id="editName">
+        <label style="font-size:12px;">日期</label><input type="date" id="editDate">
         <div class="btn-group">
-            <button class="btn btn-edit" onclick="saveEdit()">✅ 儲存修改</button>
+            <button class="btn btn-edit" onclick="saveEdit()">儲存</button>
             <button class="btn" onclick="closeModal()">取消</button>
         </div>
     </div>
@@ -110,7 +117,6 @@
     };
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-
     const GAS_URL = "https://script.google.com/macros/s/AKfycbwYyBynFBdv-pnAGYl854tsQR8BJWoagBbiB3acjtd9zs2zAt-AcY-gzM8RBkaXumHd/exec";
 
     let map = L.map('map', { zoomControl: false }).setView([24.993, 121.496], 14);
@@ -118,97 +124,96 @@
 
     let allData = [], markers = {}, selectedId = null;
 
-    // --- 浮動面板拖動 ---
+    // --- 修正 1: 增加觸控拖動 (Touch Events) ---
     const wrapper = document.getElementById('filterWrapper');
     const handle = document.getElementById('dragHandle');
     let isMoving = false, offset = [0,0];
-    handle.onmousedown = (e) => { isMoving = true; offset = [wrapper.offsetLeft - e.clientX, wrapper.offsetTop - e.clientY]; };
-    document.onmousemove = (e) => { if(isMoving) { wrapper.style.left = (e.clientX + offset[0]) + 'px'; wrapper.style.top = (e.clientY + offset[1]) + 'px'; wrapper.style.right = 'auto'; } };
-    document.onmouseup = () => isMoving = false;
+
+    const startDrag = (e) => {
+        isMoving = true;
+        const x = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+        const y = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+        offset = [wrapper.offsetLeft - x, wrapper.offsetTop - y];
+    };
+    const moveDrag = (e) => {
+        if(!isMoving) return;
+        const x = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+        const y = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+        wrapper.style.left = (x + offset[0]) + 'px';
+        wrapper.style.top = (y + offset[1]) + 'px';
+        wrapper.style.right = 'auto';
+    };
+    handle.addEventListener('mousedown', startDrag);
+    handle.addEventListener('touchstart', startDrag);
+    document.addEventListener('mousemove', moveDrag);
+    document.addEventListener('touchmove', moveDrag, {passive: false});
+    document.addEventListener('mouseup', () => isMoving = false);
+    document.addEventListener('touchend', () => isMoving = false);
+
     window.toggleFilter = () => {
         const content = document.getElementById('filterContent');
-        const btn = document.querySelector('.toggle-btn');
+        const btn = document.getElementById('toggleBtn');
         content.classList.toggle('hidden');
         btn.innerText = content.classList.contains('hidden') ? "展開" : "隱藏";
     };
 
+    // 手機預設隱藏
+    if(window.innerWidth < 600) toggleFilter();
+
     async function loadAll() {
         const snap = await getDocs(query(collection(db, "yichun_activities"), orderBy("activityDate", "desc")));
         allData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        updateMonthFilter(allData);
-        render();
-    }
-
-    function updateMonthFilter(data) {
-        const select = document.getElementById('filterMonth');
+        
+        const monthSelect = document.getElementById('filterMonth');
         const months = new Set();
-        data.forEach(d => { if (d.activityDate) months.add(d.activityDate.substring(0, 7)); });
+        allData.forEach(d => { if (d.activityDate) months.add(d.activityDate.substring(0, 7)); });
         const sorted = Array.from(months).sort().reverse();
-        select.innerHTML = '<option value="all">所有月份</option>';
+        monthSelect.innerHTML = '<option value="all">所有月份</option>';
         sorted.forEach(m => {
             const opt = document.createElement('option');
-            opt.value = m; opt.text = `${m.split('-')[0]} 年 ${m.split('-')[1]} 月`;
-            select.add(opt);
+            opt.value = m; opt.text = `${m.split('-')[0]}年${m.split('-')[1]}月`;
+            monthSelect.add(opt);
         });
+        render();
     }
 
     function render() {
         const list = document.getElementById('activityList');
         const search = document.getElementById('searchName').value.toLowerCase();
-        const distFilter = document.getElementById('filterDist').value;
-        const monthFilter = document.getElementById('filterMonth').value;
-        
+        const dist = document.getElementById('filterDist').value;
+        const month = document.getElementById('filterMonth').value;
         list.innerHTML = "";
         Object.values(markers).forEach(m => map.removeLayer(m));
-        markers = {};
 
         allData.forEach(d => {
-            const matchName = d.activityName.toLowerCase().includes(search);
-            const matchDist = (distFilter === 'all' || d.district === distFilter);
-            const matchMonth = (monthFilter === 'all' || d.activityDate.startsWith(monthFilter));
-
-            if (matchName && matchDist && matchMonth) {
+            if (d.activityName.toLowerCase().includes(search) && (dist === 'all' || d.district === dist) && (month === 'all' || d.activityDate.startsWith(month))) {
                 const m = L.marker([d.lat, d.lng]).addTo(map).bindPopup(`<b>${d.activityName}</b>`);
                 markers[d.id] = m;
-
                 const card = document.createElement('div');
                 card.className = `activity-card ${selectedId === d.id ? 'active' : ''}`;
-                card.onclick = () => {
-                    selectedId = d.id; render();
-                    map.flyTo([d.lat, d.lng], 17); m.openPopup();
-                };
-                
-                let photos = "";
-                (d.photos || []).forEach(url => {
-                    photos += `<div class="admin-photo-item"><img src="${url}"><div class="photo-del-btn" onclick="delPhoto('${d.id}', '${url}')">×</div></div>`;
-                });
-
+                card.onclick = () => { selectedId = d.id; render(); map.flyTo([d.lat, d.lng], 17); m.openPopup(); };
+                let photos = (d.photos || []).map(url => `<div class="admin-photo-item"><img src="${url}"><div class="photo-del-btn" onclick="delPhoto('${d.id}', '${url}')">×</div></div>`).join('');
                 card.innerHTML = `
-                    <div class="card-header">
-                        <span class="card-title">${d.activityName}</span>
-                        <span style="font-size:12px; color:#999;">${d.activityDate}</span>
-                    </div>
-                    <div style="font-size:12px; color:#666;">📍 ${d.district || ''}${d.village || ''}</div>
+                    <div class="card-header"><span class="card-title">${d.activityName}</span><span style="font-size:12px; color:#999;">${d.activityDate}</span></div>
+                    <div style="font-size:11px; color:#666;">📍 ${d.district || ''}${d.village || ''}</div>
                     <div class="admin-photo-grid">${photos}</div>
                     <div class="btn-group">
-                        <div class="btn btn-add-photo">📷 補傳照片<input type="file" multiple onchange="appendPhotos('${d.id}', '${d.activityName}', this)"></div>
-                        <button class="btn btn-edit" onclick="openEdit('${d.id}', '${d.activityName}', '${d.activityDate}')">✏️ 修改資訊</button>
-                        <button class="btn btn-del" onclick="delAct('${d.id}')">🗑️ 刪除整筆</button>
-                    </div>
-                `;
+                        <div class="btn btn-add-photo">📷 補照片<input type="file" multiple onchange="appendPhotos('${d.id}', '${d.activityName}', this)"></div>
+                        <button class="btn btn-edit" onclick="openEdit('${d.id}', '${d.activityName}', '${d.activityDate}')">修改</button>
+                        <button class="btn btn-del" onclick="delAct('${d.id}')">刪除</button>
+                    </div>`;
                 list.appendChild(card);
             }
         });
     }
 
-    // --- 補傳照片邏輯 ---
+    // --- 核心功能 (補傳/位置更新/刪除) ---
     const compress = (file) => new Promise(res => {
         const reader = new FileReader(); reader.readAsDataURL(file);
         reader.onload = e => {
             const img = new Image(); img.src = e.target.result;
             img.onload = () => {
-                const cvs = document.createElement('canvas');
-                const scale = Math.min(1, 1024/img.width);
+                const cvs = document.createElement('canvas'); const scale = Math.min(1, 1024/img.width);
                 cvs.width = img.width*scale; cvs.height = img.height*scale;
                 cvs.getContext('2d').drawImage(img,0,0,cvs.width,cvs.height);
                 res(cvs.toDataURL('image/jpeg', 0.8));
@@ -218,89 +223,41 @@
 
     window.appendPhotos = async (id, actName, input) => {
         event.stopPropagation();
-        const files = input.files;
-        if(files.length === 0) return;
-        
-        const btnLabel = input.parentElement;
-        const originalText = btnLabel.innerText;
-        btnLabel.innerText = "⏳ 上傳中...";
-        
+        const files = input.files; if(files.length === 0) return;
+        input.parentElement.innerText = "⏳ 上傳中...";
         try {
-            let pArr = [];
-            for(let i=0; i<files.length; i++) pArr.push(await compress(files[i]));
-            
+            let pArr = []; for(let i=0; i<files.length; i++) pArr.push(await compress(files[i]));
             const gasRes = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ activityName: actName, photos: pArr }) });
             const gasData = await gasRes.json();
-            
             if(gasData.status === "success") {
-                await updateDoc(doc(db, "yichun_activities", id), {
-                    photos: arrayUnion(...gasData.urls)
-                });
-                alert("✨ 照片補傳成功！");
-                loadAll();
-            } else { throw new Error(gasData.message); }
-        } catch(e) {
-            alert("❌ 補傳失敗：" + e.message);
-            btnLabel.innerText = originalText;
-        }
+                await updateDoc(doc(db, "yichun_activities", id), { photos: arrayUnion(...gasData.urls) });
+                alert("✨ 補傳成功！"); loadAll();
+            }
+        } catch(e) { alert("❌ 失敗：" + e.message); loadAll(); }
     };
 
-    // --- 地圖點擊更新位置 ---
     map.on('click', async (e) => {
-        if (!selectedId) return alert("請先點擊左側活動卡片。");
-        const { lat, lng } = e.latlng;
-        if (confirm(`確定修改位置？`)) {
+        if (!selectedId) return alert("請先點擊左側卡片。");
+        if (confirm(`修改位置？`)) {
+            const { lat, lng } = e.latlng;
             const res = await fetch(`https://api.nlsc.gov.tw/other/TownVillagePointQuery/${lng}/${lat}`);
             const village = new DOMParser().parseFromString(await res.text(), "text/xml").getElementsByTagName("villageName")[0]?.textContent;
             let dist = "中和";
-            if(village) {
-                const snap = await getDoc(doc(db, "chief_data", village));
-                if(snap.exists()) dist = snap.data().district || "中和";
-            }
+            if(village) { const snap = await getDoc(doc(db, "chief_data", village)); if(snap.exists()) dist = snap.data().district || "中和"; }
             await updateDoc(doc(db, "yichun_activities", selectedId), { lat, lng, district: dist, village: village || "" });
-            alert("📍 位置已更新！");
-            loadAll();
+            alert("📍 更新成功！"); loadAll();
         }
     });
 
-    // --- 管理功能 ---
-    window.delPhoto = async (id, url) => {
-        event.stopPropagation();
-        if(!confirm("刪除照片？")) return;
-        await updateDoc(doc(db, "yichun_activities", id), { photos: arrayRemove(url) });
-        loadAll();
-    };
-
-    window.delAct = async (id) => {
-        event.stopPropagation();
-        if(!confirm("刪除整筆？")) return;
-        await deleteDoc(doc(db, "yichun_activities", id));
-        loadAll();
-    };
-
-    window.openEdit = (id, name, date) => {
-        event.stopPropagation();
-        document.getElementById('editId').value = id;
-        document.getElementById('editName').value = name;
-        document.getElementById('editDate').value = date;
-        document.getElementById('editModal').style.display = 'flex';
-    };
-
+    window.delPhoto = async (id, url) => { event.stopPropagation(); if(confirm("刪除照片？")) { await updateDoc(doc(db, "yichun_activities", id), { photos: arrayRemove(url) }); loadAll(); } };
+    window.delAct = async (id) => { event.stopPropagation(); if(confirm("刪除整筆？")) { await deleteDoc(doc(db, "yichun_activities", id)); loadAll(); } };
+    window.openEdit = (id, n, d) => { event.stopPropagation(); document.getElementById('editId').value = id; document.getElementById('editName').value = n; document.getElementById('editDate').value = d; document.getElementById('editModal').style.display = 'flex'; };
     window.closeModal = () => document.getElementById('editModal').style.display = 'none';
-
-    window.saveEdit = async () => {
-        const id = document.getElementById('editId').value;
-        const name = document.getElementById('editName').value;
-        const date = document.getElementById('editDate').value;
-        await updateDoc(doc(db, "yichun_activities", id), { activityName: name, activityDate: date });
-        closeModal();
-        loadAll();
-    };
+    window.saveEdit = async () => { const id = document.getElementById('editId').value; await updateDoc(doc(db, "yichun_activities", id), { activityName: document.getElementById('editName').value, activityDate: document.getElementById('editDate').value }); closeModal(); loadAll(); };
 
     document.getElementById('searchName').oninput = render;
     document.getElementById('filterDist').onchange = render;
     document.getElementById('filterMonth').onchange = render;
-
     loadAll();
 </script>
 </body>
