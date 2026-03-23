@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>✨中和怡君活動集錦✨</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body { margin: 0; padding: 0; font-family: '微軟正黑體', sans-serif; height: 100vh; overflow: hidden; }
+        #map { width: 100%; height: 100%; z-index: 1; }
+
+        /* 頂部大標題 */
+        #pageTitle {
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+            z-index: 1000; background: rgba(255, 255, 255, 0.9); padding: 10px 30px;
+            border-radius: 50px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            font-size: 22px; font-weight: bold; color: #db2777; border: 2px solid #fbcfe8;
+            white-space: nowrap; pointer-events: none;
+        }
+
+        /* 浮動過濾面板 */
+        #filterPanel {
+            position: absolute; top: 85px; right: 20px; z-index: 1000;
+            background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(10px);
+            padding: 15px; border-radius: 15px; width: 260px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1); border: 1px solid rgba(255,255,255,0.3);
+        }
+        .filter-item { margin-bottom: 10px; }
+        .filter-item label { font-size: 13px; font-weight: bold; color: #555; display: block; margin-bottom: 4px; }
+        select, input { width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #ddd; font-size: 14px; outline: none; }
+
+        /* 照片堆疊與特效 (保留原邏輯) */
+        .photo-stack-container { position: relative; width: 100%; height: 180px; margin: 35px auto 15px; perspective: 1000px; z-index: 100; }
+        .stack-photo { position: absolute; width: 120px; height: 120px; object-fit: cover; border: 4px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.2); left: 50%; margin-left: -60px; transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1); cursor: pointer; z-index: 1; }
+        .stack-photo.active { transform: scale(1.25) rotate(var(--active-rot, 0deg)) !important; z-index: 500 !important; box-shadow: 0 12px 35px rgba(0,0,0,0.4); }
+        
+        /* 彩色 Marker 樣式 */
+        .custom-marker { width: 20px; height: 20px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+
+        /* 按鈕樣式 */
+        .popup-btn { display: inline-flex; align-items: center; justify-content: center; padding: 8px 15px; border-radius: 20px; font-weight: bold; font-size: 14px; margin: 10px 4px 0; text-decoration: none !important; cursor: pointer; border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .nav-link { background: #00C1B6; color: white !important; }
+        .zoom-btn { background: #ffc107; color: #333 !important; }
+
+        /* 燈箱與彩蛋 (保留原邏輯) */
+        #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; justify-content: center; align-items: center; }
+        #lightbox img { max-width: 90%; max-height: 90%; border: 5px solid white; border-radius: 5px; }
+        #easterEggOverlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 10000; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(4px); overflow: hidden; }
+        .easter-text { font-size: 48px; font-weight: 900; color: #ff4081; text-shadow: 0 4px 15px rgba(0,0,0,0.2); animation: bounce 0.8s infinite alternate; text-align: center; }
+        @keyframes bounce { from { transform: scale(0.95); } to { transform: scale(1.05); } }
+        .confetti { position: absolute; top: -10vh; font-size: 30px; animation: fall linear forwards; pointer-events: none; }
+        @keyframes fall { 0% { transform: translateY(0) rotate(0deg); opacity: 1; } 100% { transform: translateY(120vh) rotate(360deg); opacity: 0; } }
+
+        @media (max-width: 768px) { #filterPanel { width: 200px; padding: 10px; right: 10px; top: 75px; } #pageTitle { font-size: 16px; width: 80%; text-align: center; } }
+    </style>
+</head>
+<body>
+
+<div id="pageTitle">✨中和怡君活動集錦✨</div>
+
+<div id="filterPanel">
+    <div class="filter-item">
+        <label>🔍 搜尋活動名稱</label>
+        <input type="text" id="searchName" placeholder="輸入關鍵字...">
+    </div>
+    <div class="filter-item">
+        <label>📅 時間篩選</label>
+        <select id="filterTime">
+            <option value="all">所有時間</option>
+            <option value="today">今天新增</option>
+            <option value="month">本月活動</option>
+        </select>
+    </div>
+    <div class="filter-item">
+        <label>🗺️ 行政區/分區</label>
+        <select id="filterDist">
+            <option value="all">所有區域</option>
+            <option value="漳和">漳和分區</option>
+            <option value="員山">員山分區</option>
+            <option value="南勢">南勢分區</option>
+            <option value="秀安">秀安分區</option>
+        </select>
+    </div>
+</div>
+
+<div id="map"></div>
+
+<div id="easterEggOverlay">
+    <div id="eggMain" class="easter-text"></div>
+    <div id="eggSub" style="font-size:24px; font-weight:bold; margin-top:15px; color:#333;"></div>
+</div>
+
+<div id="lightbox" onclick="this.style.display='none'"><img id="lightboxImg" src=""></div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+    const firebaseConfig = { 
+        apiKey: "AIzaSyAI2OmA4VUUes3psK5cYJL-xqG_UVxv8iU", 
+        authDomain: "friendly-stores.firebaseapp.com",
+        projectId: "friendly-stores",
+        storageBucket: "friendly-stores.firebasestorage.app",
+        messagingSenderId: "251220478172",
+        appId: "1:251220478172:web:34736127826b569d3a8c19"
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // 彩蛋設定
+    const EasterEggConfig = [
+        { count: 10, main: "中和 陳怡君", sub: "✨ 幸福怡起拚 ✨", color: "rgba(255, 255, 255, 0.85)", symbols: ['❤️','💖','🌸'] },
+        { count: 20, main: "中和好地方", sub: "🌈 怡起更美好 🌈", color: "rgba(255, 192, 203, 0.85)", symbols: ['⭐','🌟','✨'] },
+        { count: 30, main: "中和 陳怡君", sub: "🔥 怡起努力拚 🔥", color: "rgba(255, 255, 0, 0.8)", symbols: ['💪','🚀','🔥'] }
+    ];
+
+    let scrambleCount = 0, cycleTimer = null, resumeTimer = null, currentIdx = 0, markers = {};
+    var map = L.map('map', { zoomControl: false }).setView([24.993, 121.496], 14);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
+    L.control.zoom({ position: 'bottomleft' }).addTo(map);
+
+    // --- 照片牆特效邏輯 ---
+    window.scramblePhotos = function(id) {
+        scrambleCount++; triggerEasterEgg(); stopCycle();
+        const container = document.getElementById(`stack-${id}`), photos = container.querySelectorAll('.stack-photo');
+        photos.forEach(p => {
+            p.classList.remove('active');
+            const rot = (Math.random()*180)-90, tx = (Math.random()*200)-100, ty = (Math.random()*200)-100, scale = 0.7 + Math.random()*0.6;
+            p.style.transform = `rotate(${rot}deg) translate(${tx}px, ${ty}px) scale(${scale})`;
+            p.style.zIndex = Math.floor(Math.random()*100);
+        });
+        clearTimeout(resumeTimer);
+        resumeTimer = setTimeout(() => {
+            photos.forEach(p => {
+                p.style.transform = `rotate(${p.dataset.tidyRot}deg) translate(${p.dataset.tidyTx}px, ${p.dataset.tidyTy}px) scale(1)`;
+                p.style.zIndex = p.dataset.tidyZ;
+            });
+            startCycle(container);
+        }, 5000);
+    };
+
+    window.openLightbox = function(id) {
+        const container = document.getElementById(`stack-${id}`);
+        const activeImg = container.querySelector('.stack-photo.active') || container.querySelector('.stack-photo');
+        if(activeImg) { document.getElementById('lightboxImg').src = activeImg.src; document.getElementById('lightbox').style.display = 'flex'; }
+    };
+
+    function bringToFront(img) { img.parentElement.querySelectorAll('.stack-photo').forEach(p => p.classList.remove('active')); img.classList.add('active'); }
+    function stopCycle() { if(cycleTimer) clearInterval(cycleTimer); }
+    function startCycle(container) {
+        stopCycle(); const photos = Array.from(container.querySelectorAll('.stack-photo'));
+        if (photos.length < 2) { if(photos.length==1) bringToFront(photos[0]); return; }
+        cycleTimer = setInterval(() => { currentIdx = (currentIdx + 1) % photos.length; bringToFront(photos[currentIdx]); }, 1800);
+    }
+
+    function triggerEasterEgg() {
+        const egg = EasterEggConfig.find(e => e.count === scrambleCount);
+        if(!egg) return;
+        const overlay = document.getElementById('easterEggOverlay');
+        overlay.style.background = egg.color; 
+        document.getElementById('eggMain').innerText = egg.main;
+        document.getElementById('eggSub').innerText = egg.sub;
+        overlay.style.display = 'flex';
+        for(let i=0; i<50; i++) {
+            const c = document.createElement('div'); c.className = 'confetti'; 
+            c.innerHTML = egg.symbols[Math.floor(Math.random() * egg.symbols.length)];
+            c.style.left = Math.random() * 100 + 'vw'; c.style.animationDelay = (Math.random() * 2) + 's';
+            c.style.animationDuration = (Math.random() * 3 + 2) + 's'; overlay.appendChild(c);
+        }
+        setTimeout(() => { overlay.style.display = 'none'; overlay.querySelectorAll('.confetti').forEach(el => el.remove()); if(scrambleCount>=30) scrambleCount=0; }, 5000);
+    }
+
+    // --- 資料載入與過濾 ---
+    async function loadActivities() {
+        // 清除舊 Marker
+        Object.values(markers).forEach(m => map.removeLayer(m));
+        markers = {};
+
+        const search = document.getElementById('searchName').value.toLowerCase();
+        const timeFilter = document.getElementById('filterTime').value;
+        const distFilter = document.getElementById('filterDist').value;
+
+        const snap = await getDocs(query(collection(db, "yichun_activities"), orderBy("activityDate", "desc")));
+        
+        snap.forEach(docSnap => {
+            const d = docSnap.data(), id = docSnap.id;
+            const actDate = new Date(d.activityDate);
+            const now = new Date();
+
+            // 過濾邏輯
+            let match = d.activityName.toLowerCase().includes(search);
+            if (timeFilter === 'today' && d.activityDate !== now.toISOString().split('T')[0]) match = false;
+            if (timeFilter === 'month' && (actDate.getMonth() !== now.getMonth() || actDate.getFullYear() !== now.getFullYear())) match = false;
+            if (distFilter !== 'all' && d.district !== distFilter) match = false;
+
+            if (match && d.lat && d.lng) {
+                // 自定義彩色 Marker
+                const color = d.color || "#00C1B6";
+                const icon = L.divIcon({
+                    className: 'custom-div-icon',
+                    html: `<div class="custom-marker" style="background-color: ${color};"></div>`,
+                    iconSize: [24, 24], iconAnchor: [12, 24]
+                });
+
+                const hasPhotos = d.photos && d.photos.length > 0;
+                let galleryHtml = hasPhotos ? `<div class="photo-stack-container" id="stack-${id}">` : `<div style="margin-bottom:10px;"></div>`;
+                if(hasPhotos) {
+                    d.photos.forEach((url, idx) => {
+                        const rot = (Math.random() * 30) - 15, angle = (idx / d.photos.length) * 360, scatter = 35;
+                        galleryHtml += `<img src="${url}" class="stack-photo" data-tidy-rot="${rot}" data-tidy-tx="${Math.cos(angle * Math.PI / 180) * scatter}" data-tidy-ty="${Math.sin(angle * Math.PI / 180) * scatter}" data-tidy-z="${idx}" style="transform: rotate(${rot}deg) translate(${Math.cos(angle * Math.PI / 180) * scatter}px, ${Math.sin(angle * Math.PI / 180) * scatter}px); z-index: ${idx};" onclick="scramblePhotos('${id}')">`;
+                    });
+                    galleryHtml += `</div>`;
+                }
+
+                const navUrl = `https://www.google.com/maps/dir/?api=1&destination=${d.lat},${d.lng}&travelmode=two-wheeler`;
+                const popupHtml = `
+                    <div style="text-align:center; min-width:250px;">
+                        <div style="font-size:12px; color:#888;">${d.activityDate} | ${d.district}${d.village}</div>
+                        <b style="font-size:18px; color:#333;">${d.activityName}</b>
+                        ${galleryHtml}
+                        <div style="display:flex; justify-content:center; gap:5px;">
+                            <a href="${navUrl}" target="_blank" class="popup-btn nav-link">🛵 導航</a>
+                            ${hasPhotos ? `<button class="popup-btn zoom-btn" onclick="openLightbox('${id}')">🔍 放大</button>` : ''}
+                        </div>
+                    </div>`;
+
+                const m = L.marker([d.lat, d.lng], { icon: icon }).addTo(map).bindPopup(popupHtml);
+                m.on('popupopen', () => { if(hasPhotos) { currentIdx = 0; startCycle(document.getElementById(`stack-${id}`)); } });
+                m.on('popupclose', () => { stopCycle(); clearTimeout(resumeTimer); });
+                markers[id] = m;
+            }
+        });
+    }
+
+    // 監聽過濾器變動
+    document.getElementById('searchName').oninput = loadActivities;
+    document.getElementById('filterTime').onchange = loadActivities;
+    document.getElementById('filterDist').onchange = loadActivities;
+
+    loadActivities();
+</script>
+</body>
+</html>

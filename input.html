@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>活動照片管理 - 中和陳怡君</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body { font-family: '微軟正黑體', sans-serif; background: #fdf2f8; margin: 0; padding: 15px; display: flex; justify-content: center; }
+        .container { background: white; width: 100%; max-width: 500px; padding: 25px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 15px; background: #f8f9fa; padding: 12px; border-radius: 10px; border: 1px solid #eee; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; }
+        input[type="text"], input[type="date"], input[type="file"], select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; margin-top: 5px; }
+        
+        /* 輕快、可愛的色系 */
+        .color-picker { display: flex; gap: 12px; margin-top: 5px; justify-content: space-around; }
+        .color-btn { width: 38px; height: 38px; border-radius: 50%; cursor: pointer; border: none; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: 0.2s; }
+        .color-btn.active { transform: scale(1.3); box-shadow: 0 4px 10px rgba(0,0,0,0.4); }
+
+        #miniMap { height: 260px; width: 100%; border-radius: 10px; margin-top: 10px; z-index: 1; border: 2px solid #eee; }
+        .main-btn { width: 100%; padding: 16px; background: #FFB6C1; color: #333; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        #status { text-align: center; margin-top: 15px; font-weight: bold; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2 style="text-align:center; color: #333;">✨ 活動照片管理 ✨</h2>
+    
+    <div class="form-group" style="background: #eef4ff; border-color: #d0e1ff;">
+        <label>🛠️ 操作模式</label>
+        <select id="modeSelect">
+            <option value="new">✨ 建立新活動</option>
+        </select>
+    </div>
+
+    <div id="newActivityFields">
+        <div class="form-group">
+            <label>1. 活動名稱*</label>
+            <input type="text" id="activityName" placeholder="例如：秀安里中秋晚會">
+        </div>
+        <div class="form-group">
+            <label>2. 活動日期*</label>
+            <input type="date" id="activityDate">
+        </div>
+        <div class="form-group">
+            <label>3. 標記顏色</label>
+            <div class="color-picker" id="colorPicker">
+                <div class="color-btn active" style="background: #87CEEB;" data-color="#87CEEB" title="天晴色"></div> 
+                <div class="color-btn" style="background: #00C1B6;" data-color="#00C1B6" title="怡君青"></div> 
+                <div class="color-btn" style="background: #FFB6C1;" data-color="#FFB6C1" title="淺粉紅"></div> 
+                <div class="color-btn" style="background: #98FB98;" data-color="#98FB98" title="嫩草綠"></div> 
+                <div class="color-btn" style="background: #FFDAB9;" data-color="#FFDAB9" title="蜜桃橘"></div> 
+                <div class="color-btn" style="background: #E6E6FA;" data-color="#E6E6FA" title="薰衣草紫"></div> 
+            </div>
+        </div>
+        <div class="form-group">
+            <label>4. 地點定位* (請點擊地圖或輸入地址)</label>
+            <input type="text" id="address" placeholder="輸入地址後點旁邊自動找里別">
+            <div id="miniMap"></div>
+            <input type="hidden" id="lat"><input type="hidden" id="lng"><input type="hidden" id="village"><input type="hidden" id="district">
+            <span id="geoStatus" style="font-size:12px; font-weight:bold; margin-top:8px; display:block; color:#d9534f;">📍 尚未定位 (點擊地圖試試)</span>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label>5. 上傳照片 (複選，無上限)</label>
+        <input type="file" id="photos" accept="image/*" multiple>
+    </div>
+
+    <button id="submitBtn" class="main-btn">🚀 存入活動集錦</button>
+    <div id="status"></div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, serverTimestamp, getDocs, query, orderBy, getDoc, doc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+    const firebaseConfig = { 
+        apiKey: "AIzaSyAI2OmA4VUUes3psK5cYJL-xqG_UVxv8iU", 
+        authDomain: "friendly-stores.firebaseapp.com",
+        projectId: "friendly-stores",
+        storageBucket: "friendly-stores.firebasestorage.app",
+        messagingSenderId: "251220478172",
+        appId: "1:251220478172:web:34736127826b569d3a8c19"
+    };
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbwYyBynFBdv-pnAGYl854tsQR8BJWoagBbiB3acjtd9zs2zAt-AcY-gzM8RBkaXumHd/exec";
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    document.getElementById('activityDate').valueAsDate = new Date();
+
+    async function loadActivities() {
+        const select = document.getElementById('modeSelect');
+        const snap = await getDocs(query(collection(db, "yichun_activities"), orderBy("createdAt", "desc")));
+        snap.forEach(d => {
+            let opt = document.createElement('option');
+            opt.value = d.id;
+            opt.text = `補傳 📎 ${d.data().activityName}`;
+            select.add(opt);
+        });
+    }
+    loadActivities();
+
+    var map = L.map('miniMap').setView([24.993, 121.496], 13.5);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
+    var marker;
+
+    // ✨ 恢復活味：地圖點擊定位功能
+    function updateLocation(lat, lng) {
+        if(marker) map.removeLayer(marker);
+        marker = L.marker([lat, lng], {draggable: true}).addTo(map);
+        map.setView([lat, lng], 17);
+        document.getElementById('lat').value = lat;
+        document.getElementById('lng').value = lng;
+        autoDetectVillage(lat, lng);
+        
+        marker.on('dragend', (e) => {
+            const pos = e.target.getLatLng();
+            updateLocation(pos.lat, pos.lng);
+        });
+    }
+
+    // ✨ 監聽地圖點擊
+    map.on('click', e => updateLocation(e.latlng.lat, e.latlng.lng));
+
+    document.getElementById('address').onblur = async function() {
+        let addr = this.value; if(!addr || addr.length < 3) return;
+        if(!addr.includes("中和")) addr = "新北市中和區" + addr;
+        const res = await fetch(`${GAS_URL}?address=${encodeURIComponent(addr)}`);
+        const data = await res.json();
+        if(data.status === 'OK') updateLocation(data.results[0].geometry.location.lat, data.results[0].geometry.location.lng);
+    };
+
+    async function autoDetectVillage(lat, lng) {
+        const res = await fetch(`https://api.nlsc.gov.tw/other/TownVillagePointQuery/${lng}/${lat}`);
+        const villageName = new DOMParser().parseFromString(await res.text(), "text/xml").getElementsByTagName("villageName")[0]?.textContent;
+        if (villageName) {
+            document.getElementById('village').value = villageName;
+            const chiefSnap = await getDoc(doc(db, "chief_data", villageName));
+            const dist = chiefSnap.exists() ? (chiefSnap.data().district || "中和") : "中和";
+            document.getElementById('district').value = dist;
+            document.getElementById('geoStatus').innerText = `✅ ${dist}區-${villageName}`;
+            document.getElementById('geoStatus').style.color = "#28a745";
+        }
+    }
+
+    let selectedColor = "#87CEEB";
+    document.querySelectorAll('.color-btn').forEach(btn => btn.onclick = () => {
+        document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active'); selectedColor = btn.dataset.color;
+    });
+
+    const compress = (file) => new Promise(res => {
+        const reader = new FileReader(); reader.readAsDataURL(file);
+        reader.onload = e => {
+            const img = new Image(); img.src = e.target.result;
+            img.onload = () => {
+                const cvs = document.createElement('canvas');
+                const scale = Math.min(1, 1024/img.width);
+                cvs.width = img.width*scale; cvs.height = img.height*scale;
+                cvs.getContext('2d').drawImage(img,0,0,cvs.width,cvs.height);
+                res(cvs.toDataURL('image/jpeg', 0.8));
+            };
+        };
+    });
+
+    document.getElementById('submitBtn').onclick = async () => {
+        const mode = document.getElementById('modeSelect').value;
+        const name = document.getElementById('activityName').value;
+        const files = document.getElementById('photos').files;
+        const status = document.getElementById('status');
+        const lat = document.getElementById('lat').value;
+        if(mode === 'new' && (!name || !lat)) return alert("請填寫活動名稱並在地圖定位！");
+        if(files.length === 0) return alert("請選擇照片！");
+        const btn = document.getElementById('submitBtn'); btn.disabled = true;
+        status.innerText = "⏳ 正在處理壓縮與上傳...";
+
+        try {
+            let pArr = []; for(let i=0; i<files.length; i++) pArr.push(await compress(files[i]));
+            const gasRes = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ activityName: (mode === 'new' ? name : "補傳"), photos: pArr }) });
+            const gasData = await gasRes.json();
+            
+            if(gasData.status === "success") {
+                if(mode === 'new') {
+                    await addDoc(collection(db, "yichun_activities"), {
+                        activityName: name, activityDate: document.getElementById('activityDate').value,
+                        color: selectedColor, lat: parseFloat(lat), lng: parseFloat(document.getElementById('lng').value),
+                        district: document.getElementById('district').value, village: document.getElementById('village').value,
+                        photos: gasData.urls, createdAt: serverTimestamp()
+                    });
+                } else {
+                    await updateDoc(doc(db, "yichun_activities", mode), { photos: arrayUnion(...gasData.urls) });
+                }
+                alert("✨ 紀錄成功！"); location.reload();
+            } else {
+                throw new Error(gasData.message);
+            }
+        } catch(e) {
+            btn.disabled = false; status.innerText = "❌ 失敗：" + e.message;
+        }
+    };
+</script>
+</body>
+</html>
