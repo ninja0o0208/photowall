@@ -2,15 +2,20 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>✨中和怡君活動集錦✨</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        body { margin: 0; padding: 0; font-family: '微軟正黑體', sans-serif; height: 100vh; overflow: hidden; background: #f8f9fa; }
+        /* 徹底鎖定水平軸，防止右側空白 */
+        html, body { 
+            margin: 0; padding: 0; width: 100%; height: 100%; 
+            overflow: hidden; position: fixed; font-family: '微軟正黑體', sans-serif;
+        }
+
         #map { width: 100%; height: 100%; z-index: 1; }
 
-        /* 底部標題：確保不換行，適應手機 */
+        /* 底部標題 */
         #pageTitle {
             position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
             z-index: 1000; background: rgba(255, 255, 255, 0.95); padding: 8px 25px;
@@ -19,22 +24,20 @@
             white-space: nowrap; pointer-events: none; backdrop-filter: blur(5px);
         }
 
-        /* ✨ 側邊抽屜：支援上下移動 (Draggable Tab) ✨ */
+        /* 側邊抽屜式篩選：支援上下拖動 */
         #filterWrapper {
             position: absolute; top: 100px; right: 0; z-index: 2000;
             display: flex; align-items: flex-start;
             transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
-            transform: translateX(100%);
-            touch-action: none; /* 禁用預設觸控，以便我們接手拖拽 */
+            transform: translateX(100%); touch-action: none;
         }
         #filterWrapper.active { transform: translateX(0); }
 
         #filterTab {
             background: #00C1B6; color: white; padding: 12px 8px;
-            border-radius: 10px 0 0 10px; cursor: move; /* 提示可以移動 */
+            border-radius: 10px 0 0 10px; cursor: move;
             writing-mode: vertical-lr; font-size: 13px; font-weight: bold; letter-spacing: 2px;
             box-shadow: -2px 0 10px rgba(0,0,0,0.1); margin-left: -32px;
-            user-select: none;
         }
 
         #filterPanel {
@@ -44,35 +47,54 @@
         }
         .filter-item { margin-bottom: 12px; }
         .filter-item label { font-size: 11px; font-weight: bold; color: #777; display: block; margin-bottom: 4px; }
-        select, input { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #eee; font-size: 13px; outline: none; }
+        select, input { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #eee; font-size: 16px; outline: none; }
 
-        /* 相片大頭針座標 */
+        /* 相片座標標籤 */
         .photo-marker { display: flex; flex-direction: column; align-items: center; }
         .marker-label { background: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2); white-space: nowrap; margin-bottom: 3px; border: 1px solid #00C1B6; }
         .marker-photo-wrap { width: 38px; height: 38px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3); overflow: hidden; }
         .marker-photo-wrap img { width: 100%; height: 100%; object-fit: cover; }
 
-        /* 彈窗：標題與相片牆 */
+        /* 彈窗 UI：標題置頂 */
         .popup-info-top { font-size: 11px; color: #999; margin-bottom: 3px; }
-        .popup-header-top { position: relative; z-index: 1010; background: rgba(255,255,255,0.9); padding: 4px 10px; border-radius: 5px; margin-bottom: -15px; font-size: 16px; font-weight: bold; color: #333; }
+        .popup-header-top { 
+            position: relative; z-index: 1010; 
+            background: rgba(255,255,255,0.9); padding: 4px 10px; 
+            border-radius: 5px; margin-bottom: -15px; 
+            font-size: 16px; font-weight: bold; color: #333; 
+        }
+
+        /* 照片牆特效 */
         .photo-stack-container { position: relative; width: 100%; height: 210px; margin: 30px auto 10px; perspective: 1000px; z-index: 100; }
         .stack-photo { position: absolute; width: 140px; height: 140px; object-fit: cover; border: 4px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.15); left: 50%; margin-left: -70px; transition: all 0.5s ease; cursor: pointer; }
         .stack-photo.active { transform: scale(1.1) !important; z-index: 500 !important; }
 
-        /* 按鈕：全數補回 */
+        /* 功能按鈕 */
         .popup-btn-wrap { display: flex; justify-content: center; gap: 4px; margin-top: 10px; }
-        .popup-btn { padding: 8px 14px; border-radius: 20px; font-weight: bold; font-size: 12px; cursor: pointer; border: none; background: #00C1B6; color: white; text-decoration: none; }
+        .popup-btn { 
+            padding: 8px 14px; border-radius: 20px; font-weight: bold; font-size: 12px; 
+            cursor: pointer; border: none; box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
+            background: #00C1B6; color: white; text-decoration: none; 
+            display: inline-flex; align-items: center; justify-content: center;
+        }
         .btn-video { background: #FF85A1; }
         .btn-zoom { background: #FFC107; color: #333; }
 
-        /* 燈箱 */
-        #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.92); z-index: 9999; justify-content: center; align-items: center; }
-        #lightbox img { max-width: 85%; max-height: 85%; border: 5px solid white; border-radius: 5px; }
+        /* 智慧燈箱：點圖片換下一張 */
+        #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.92); z-index: 9999; justify-content: center; align-items: center; cursor: pointer; }
+        #lightbox img { max-width: 85%; max-height: 85%; border: 5px solid white; border-radius: 5px; cursor: default; }
+
+        /* 彩蛋 */
+        #eggOverlay { display: none; position: fixed; top:0; left:0; width:100vw; height:100vh; z-index:10000; flex-direction:column; justify-content:center; align-items:center; pointer-events:none; }
+        .confetti { position: absolute; top: -10vh; font-size: 32px; animation: fall linear forwards; }
+        @keyframes fall { 0% { transform: translateY(0) rotate(0deg); opacity: 1; } 100% { transform: translateY(115vh) rotate(360deg); opacity: 0; } }
 
         @media (max-width: 600px) {
             #pageTitle { font-size: 14px; padding: 6px 15px; bottom: 20px; }
+            #filterWrapper { top: auto; bottom: 120px; }
             #filterPanel { width: 150px; }
             #filterTab { padding: 10px 6px; margin-left: -26px; }
+            select, input { font-size: 14px; }
         }
     </style>
 </head>
@@ -84,11 +106,11 @@
     <div id="filterTab" id="dragHandle">🔍 篩選活動</div>
     <div id="filterPanel">
         <div class="filter-item">
-            <label>名稱搜尋</label>
+            <label>活動名稱搜尋</label>
             <input type="text" id="searchName" placeholder="輸入關鍵字...">
         </div>
         <div class="filter-item">
-            <label>月份篩選</label>
+            <label>按月份篩選</label>
             <select id="filterMonth"><option value="all">所有月份</option></select>
         </div>
         <div class="filter-item">
@@ -106,7 +128,9 @@
 </div>
 
 <div id="map"></div>
-<div id="lightbox" onclick="this.style.display='none'"><img id="lightboxImg" style="max-width:90%; max-height:85%; border:5px solid white;"></div>
+<div id="eggOverlay"><h1 style="color:#FF4081; font-size:50px; text-shadow: 0 0 10px white;">✨ 幸福怡起拚 ✨</h1></div>
+
+<div id="lightbox" onclick="closeLightbox(event)"><img id="lightboxImg" onclick="nextLightboxPhoto(event)"></div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
@@ -120,55 +144,45 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    let markers = {}, allActivities = [], cycleTimer = null, resumeTimer = null, stackIdx = 0;
+    let markers = {}, allActivities = [], scrambleCount = 0, currentPhotoList = [], currentPhotoIdx = 0, cycleTimer = null, resumeTimer = null, stackIdx = 0;
 
-    // --- 修正 1: 手機版預設縮放改為 13.2，確保看見全中和 ---
     const initialZoom = window.innerWidth < 600 ? 13.2 : 14;
-    var map = L.map('map', { zoomControl: false }).setView([24.993, 121.496], initialZoom);
+    var map = L.map('map', { zoomControl: false, attributionControl: false }).setView([24.993, 121.496], initialZoom);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
 
-    // --- ✨ 修正 2: 側邊抽屜切換與垂直移動邏輯 ✨ ---
+    // --- 抽屜拖動與切換 ---
     const wrapper = document.getElementById('filterWrapper');
     const tab = document.getElementById('filterTab');
     let isDragging = false, startY = 0, initialTop = 0, moved = false;
-
     window.toggleFilter = () => wrapper.classList.toggle('active');
+    const onStart = (e) => { isDragging = true; moved = false; startY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY; initialTop = wrapper.offsetTop; wrapper.style.transition = 'none'; };
+    const onMove = (e) => { if (!isDragging) return; const curY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY; const diff = curY - startY; if (Math.abs(diff) > 5) moved = true; wrapper.style.top = (initialTop + diff) + 'px'; };
+    const onEnd = () => { if (!isDragging) return; isDragging = false; wrapper.style.transition = 'transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1)'; if (!moved) toggleFilter(); };
+    tab.addEventListener('mousedown', onStart); tab.addEventListener('touchstart', onStart);
+    document.addEventListener('mousemove', onMove); document.addEventListener('touchmove', onMove, {passive: false});
+    document.addEventListener('mouseup', onEnd); document.addEventListener('touchend', onEnd);
 
-    // 處理拖拽與點擊
-    const onStart = (e) => {
-        isDragging = true; moved = false;
-        startY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
-        initialTop = wrapper.offsetTop;
-        wrapper.style.transition = 'none'; // 拖動時關閉動畫
+    // --- ✨ 復活：放大檢視連續播放 ---
+    window.openLightbox = (photosJson) => {
+        currentPhotoList = JSON.parse(decodeURIComponent(photosJson));
+        currentPhotoIdx = 0;
+        document.getElementById('lightboxImg').src = currentPhotoList[currentPhotoIdx];
+        document.getElementById('lightbox').style.display = 'flex';
     };
-    const onMove = (e) => {
-        if (!isDragging) return;
-        const currentY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
-        const diffY = currentY - startY;
-        if (Math.abs(diffY) > 5) moved = true; // 判斷是移動而非點擊
-        wrapper.style.top = (initialTop + diffY) + 'px';
+    window.nextLightboxPhoto = (e) => {
+        e.stopPropagation(); // 防止點擊圖片時觸發背景的關閉事件
+        currentPhotoIdx = (currentPhotoIdx + 1) % currentPhotoList.length;
+        document.getElementById('lightboxImg').src = currentPhotoList[currentPhotoIdx];
     };
-    const onEnd = () => {
-        if (!isDragging) return;
-        isDragging = false;
-        wrapper.style.transition = 'transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1)';
-        if (!moved) toggleFilter(); // 如果沒什麼移動，就當作是點擊切換
-    };
+    window.closeLightbox = (e) => { if (e.target.id === "lightbox") document.getElementById('lightbox').style.display = 'none'; };
 
-    tab.addEventListener('mousedown', onStart);
-    tab.addEventListener('touchstart', onStart);
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('touchmove', onMove, {passive: false});
-    document.addEventListener('mouseup', onEnd);
-    document.addEventListener('touchend', onEnd);
-
-    // --- 特效與資料加載 (保留原本所有好用功能) ---
+    // --- ✨ 復活：點擊弄亂與彩蛋 ---
     window.scramblePhotos = function(id) {
-        stopCycle();
+        scrambleCount++; triggerEgg(); stopCycle();
         const container = document.getElementById(`stack-${id}`), photos = container.querySelectorAll('.stack-photo');
         photos.forEach(p => {
             p.classList.remove('active');
-            const rot = (Math.random()*120)-60, tx = (Math.random()*150)-75, ty = (Math.random()*150)-75;
+            const rot = (Math.random()*120)-60, tx = (Math.random()*140)-70, ty = (Math.random()*140)-70;
             p.style.transform = `rotate(${rot}deg) translate(${tx}px, ${ty}px) scale(0.8)`;
         });
         clearTimeout(resumeTimer);
@@ -184,6 +198,22 @@
         cycleTimer = setInterval(() => { photos.forEach(p => p.classList.remove('active')); stackIdx = (stackIdx + 1) % photos.length; photos[stackIdx].classList.add('active'); }, 2000);
     }
     function stopCycle() { if(cycleTimer) clearInterval(cycleTimer); }
+
+    function triggerEgg() {
+        if(scrambleCount % 10 !== 0) return;
+        const overlay = document.getElementById('eggOverlay');
+        overlay.style.display = 'flex';
+        const spawn = () => {
+            for(let i=0; i<35; i++) {
+                const c = document.createElement('div'); c.className = 'confetti'; 
+                c.innerHTML = ['💖','✨','🌸','🎀'][Math.floor(Math.random()*4)];
+                c.style.left = Math.random()*100+'vw'; c.style.animationDuration = (Math.random()*3+2.5)+'s';
+                overlay.appendChild(c);
+            }
+        };
+        spawn(); setTimeout(spawn, 2200);
+        setTimeout(() => { overlay.style.display = 'none'; overlay.querySelectorAll('.confetti').forEach(el => el.remove()); }, 5000);
+    }
 
     async function load() {
         const snap = await getDocs(query(collection(db, "yichun_activities"), orderBy("activityDate", "desc")));
@@ -225,9 +255,9 @@
                         <div class="popup-header-top">${d.activityName}</div>
                         ${gallery}
                         <div class="popup-btn-wrap">
-                            <button class="popup-btn" onclick="alert('📸 相簿載入中...')">🖼️ 相簿</button>
-                            <button class="popup-btn btn-video" onclick="alert('🎥 影片載入中...')">🎥 影片</button>
-                            <button class="popup-btn btn-zoom" onclick="document.getElementById('lightboxImg').src='${d.photos[0]}'; document.getElementById('lightbox').style.display='flex';">🔍 放大</button>
+                            <button class="popup-btn" onclick="alert('建置中...')">🖼️ 相簿</button>
+                            <button class="popup-btn btn-video" onclick="alert('建置中...')">🎥 影片</button>
+                            <button class="popup-btn btn-zoom" onclick="openLightbox('${encodeURIComponent(JSON.stringify(d.photos))}')">🔍 放大</button>
                         </div>
                     </div>`;
 
