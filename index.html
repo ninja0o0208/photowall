@@ -7,15 +7,9 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        /* 徹底鎖定水平軸，防止右側空白 */
-        html, body { 
-            margin: 0; padding: 0; width: 100%; height: 100%; 
-            overflow: hidden; position: fixed; font-family: '微軟正黑體', sans-serif;
-        }
-
+        html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; position: fixed; font-family: '微軟正黑體', sans-serif; }
         #map { width: 100%; height: 100%; z-index: 1; }
 
-        /* 底部標題 */
         #pageTitle {
             position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
             z-index: 1000; background: rgba(255, 255, 255, 0.95); padding: 8px 25px;
@@ -24,78 +18,44 @@
             white-space: nowrap; pointer-events: none; backdrop-filter: blur(5px);
         }
 
-        /* 側邊抽屜式篩選：支援上下拖動 */
-        #filterWrapper {
-            position: absolute; top: 100px; right: 0; z-index: 2000;
-            display: flex; align-items: flex-start;
-            transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
-            transform: translateX(100%); touch-action: none;
-        }
+        #filterWrapper { position: absolute; top: 100px; right: 0; z-index: 2000; display: flex; align-items: flex-start; transition: transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1); transform: translateX(100%); touch-action: none; }
         #filterWrapper.active { transform: translateX(0); }
-
-        #filterTab {
-            background: #00C1B6; color: white; padding: 12px 8px;
-            border-radius: 10px 0 0 10px; cursor: move;
-            writing-mode: vertical-lr; font-size: 13px; font-weight: bold; letter-spacing: 2px;
-            box-shadow: -2px 0 10px rgba(0,0,0,0.1); margin-left: -32px;
-        }
-
-        #filterPanel {
-            background: rgba(255, 255, 255, 0.98); width: 165px; 
-            padding: 15px; border-left: 1px solid #ddd;
-            box-shadow: -5px 0 20px rgba(0,0,0,0.1); border-radius: 0 0 0 15px;
-        }
+        #filterTab { background: #00C1B6; color: white; padding: 12px 8px; border-radius: 10px 0 0 10px; cursor: move; writing-mode: vertical-lr; font-size: 13px; font-weight: bold; letter-spacing: 2px; box-shadow: -2px 0 10px rgba(0,0,0,0.1); margin-left: -32px; }
+        #filterPanel { background: rgba(255, 255, 255, 0.98); width: 165px; padding: 15px; border-left: 1px solid #ddd; box-shadow: -5px 0 20px rgba(0,0,0,0.1); border-radius: 0 0 0 15px; }
         .filter-item { margin-bottom: 12px; }
         .filter-item label { font-size: 11px; font-weight: bold; color: #777; display: block; margin-bottom: 4px; }
         select, input { width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #eee; font-size: 16px; outline: none; }
 
-        /* 相片座標標籤 */
         .photo-marker { display: flex; flex-direction: column; align-items: center; }
         .marker-label { background: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2); white-space: nowrap; margin-bottom: 3px; border: 1px solid #00C1B6; }
         .marker-photo-wrap { width: 38px; height: 38px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3); overflow: hidden; }
         .marker-photo-wrap img { width: 100%; height: 100%; object-fit: cover; }
 
-        /* 彈窗 UI：標題置頂 */
         .popup-info-top { font-size: 11px; color: #999; margin-bottom: 3px; }
-        .popup-header-top { 
-            position: relative; z-index: 1010; 
-            background: rgba(255,255,255,0.9); padding: 4px 10px; 
-            border-radius: 5px; margin-bottom: -15px; 
-            font-size: 16px; font-weight: bold; color: #333; 
-        }
-
-        /* 照片牆特效 */
+        .popup-header-top { position: relative; z-index: 1010; background: rgba(255,255,255,0.9); padding: 4px 10px; border-radius: 5px; margin-bottom: -15px; font-size: 16px; font-weight: bold; color: #333; }
         .photo-stack-container { position: relative; width: 100%; height: 210px; margin: 30px auto 10px; perspective: 1000px; z-index: 100; }
         .stack-photo { position: absolute; width: 140px; height: 140px; object-fit: cover; border: 4px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.15); left: 50%; margin-left: -70px; transition: all 0.5s ease; cursor: pointer; }
         .stack-photo.active { transform: scale(1.1) !important; z-index: 500 !important; }
 
-        /* 功能按鈕 */
         .popup-btn-wrap { display: flex; justify-content: center; gap: 4px; margin-top: 10px; }
-        .popup-btn { 
-            padding: 8px 14px; border-radius: 20px; font-weight: bold; font-size: 12px; 
-            cursor: pointer; border: none; box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
-            background: #00C1B6; color: white; text-decoration: none; 
-            display: inline-flex; align-items: center; justify-content: center;
-        }
+        .popup-btn { padding: 8px 14px; border-radius: 20px; font-weight: bold; font-size: 12px; cursor: pointer; border: none; box-shadow: 0 2px 5px rgba(0,0,0,0.1); background: #00C1B6; color: white; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
         .btn-video { background: #FF85A1; }
         .btn-zoom { background: #FFC107; color: #333; }
 
-        /* 智慧燈箱：點圖片換下一張 */
         #lightbox { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.92); z-index: 9999; justify-content: center; align-items: center; cursor: pointer; }
         #lightbox img { max-width: 85%; max-height: 85%; border: 5px solid white; border-radius: 5px; cursor: default; }
 
-        /* 彩蛋 */
-        #eggOverlay { display: none; position: fixed; top:0; left:0; width:100vw; height:100vh; z-index:10000; flex-direction:column; justify-content:center; align-items:center; pointer-events:none; }
-        .confetti { position: absolute; top: -10vh; font-size: 32px; animation: fall linear forwards; }
+        #eggOverlay { display: none; position: fixed; top:0; left:0; width:100vw; height:100vh; z-index:10000; flex-direction:column; justify-content:center; align-items:center; pointer-events:none; transition: opacity 0.3s ease; }
+        #eggContent { text-align: center; max-width: 90%; animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; pointer-events: auto; }
+        @keyframes popIn { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+        .breathe-text { animation: breathe 1.5s ease-in-out infinite; display: inline-block; }
+        @keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.15); } }
+
+        .confetti { position: absolute; top: -10vh; font-size: 32px; animation: fall linear forwards; pointer-events: none; }
         @keyframes fall { 0% { transform: translateY(0) rotate(0deg); opacity: 1; } 100% { transform: translateY(115vh) rotate(360deg); opacity: 0; } }
 
-        @media (max-width: 600px) {
-            #pageTitle { font-size: 14px; padding: 6px 15px; bottom: 20px; }
-            #filterWrapper { top: auto; bottom: 120px; }
-            #filterPanel { width: 150px; }
-            #filterTab { padding: 10px 6px; margin-left: -26px; }
-            select, input { font-size: 14px; }
-        }
+        @media (max-width: 600px) { #pageTitle { font-size: 14px; padding: 6px 15px; bottom: 20px; } #filterWrapper { top: auto; bottom: 120px; } #filterPanel { width: 150px; } #filterTab { padding: 10px 6px; margin-left: -26px; } select, input { font-size: 14px; } }
     </style>
 </head>
 <body>
@@ -105,14 +65,8 @@
 <div id="filterWrapper">
     <div id="filterTab" id="dragHandle">🔍 篩選活動</div>
     <div id="filterPanel">
-        <div class="filter-item">
-            <label>活動名稱搜尋</label>
-            <input type="text" id="searchName" placeholder="輸入關鍵字...">
-        </div>
-        <div class="filter-item">
-            <label>按月份篩選</label>
-            <select id="filterMonth"><option value="all">所有月份</option></select>
-        </div>
+        <div class="filter-item"><label>活動名稱搜尋</label><input type="text" id="searchName" placeholder="輸入關鍵字..."></div>
+        <div class="filter-item"><label>按月份篩選</label><select id="filterMonth"><option value="all">所有月份</option></select></div>
         <div class="filter-item">
             <label>分區篩選</label>
             <select id="filterDist">
@@ -121,14 +75,13 @@
                 <option value="南勢">南勢分區</option><option value="秀安">秀安分區</option>
             </select>
         </div>
-        <div style="text-align: center; margin-top: 10px;">
-            <button onclick="toggleFilter()" style="background:none; border:none; color:#999; cursor:pointer; font-size:12px;">✖ 關閉選單</button>
-        </div>
+        <div style="text-align: center; margin-top: 10px;"><button onclick="toggleFilter()" style="background:none; border:none; color:#999; cursor:pointer; font-size:12px;">✖ 關閉選單</button></div>
     </div>
 </div>
 
 <div id="map"></div>
-<div id="eggOverlay"><h1 style="color:#FF4081; font-size:50px; text-shadow: 0 0 10px white;">✨ 幸福怡起拚 ✨</h1></div>
+
+<div id="eggOverlay"><div id="eggContent"></div></div>
 
 <div id="lightbox" onclick="closeLightbox(event)"><img id="lightboxImg" onclick="nextLightboxPhoto(event)"></div>
 
@@ -145,74 +98,136 @@
     const db = getFirestore(app);
 
     let markers = {}, allActivities = [], scrambleCount = 0, currentPhotoList = [], currentPhotoIdx = 0, cycleTimer = null, resumeTimer = null, stackIdx = 0;
+    let lightboxViewCount = 0;
+    let currentLightboxActId = null; 
 
+    const centerLat = 24.993, centerLng = 121.496;
     const initialZoom = window.innerWidth < 600 ? 13.2 : 14;
-    var map = L.map('map', { zoomControl: false, attributionControl: false }).setView([24.993, 121.496], initialZoom);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
+    var map = L.map('map', { zoomControl: false, attributionControl: false }).setView([centerLat, centerLng], initialZoom);
 
-    // --- 抽屜拖動與切換 ---
-    const wrapper = document.getElementById('filterWrapper');
-    const tab = document.getElementById('filterTab');
+    // ✨ 修改：依據你的要求設定全新地圖順序
+    const mapTiles = [
+        'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', // 1: 乾淨街道 (預設)
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', // 2: 衛星地圖
+        'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', // 3: 最簡單的灰白地圖
+        'https://tile.openstreetmap.org/{z}/{x}/{y}.png', // 4: 標準街道
+        'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' // 5: 深色模式
+    ];
+    let currentMapIdx = 0;
+    let baseLayer = L.tileLayer(mapTiles[0]).addTo(map);
+
+    let pressTimer;
+    const mapContainer = document.getElementById('map');
+    const startPress = (e) => {
+        if (e.type === 'touchstart' && e.touches.length > 1) return; 
+        pressTimer = setTimeout(() => { currentMapIdx = (currentMapIdx + 1) % mapTiles.length; baseLayer.setUrl(mapTiles[currentMapIdx]); triggerEgg(true, false, true); }, 3000);
+    };
+    const cancelPress = () => clearTimeout(pressTimer);
+    mapContainer.addEventListener('mousedown', startPress); mapContainer.addEventListener('touchstart', startPress, {passive: true});
+    mapContainer.addEventListener('mouseup', cancelPress); mapContainer.addEventListener('mouseleave', cancelPress);
+    mapContainer.addEventListener('touchend', cancelPress); mapContainer.addEventListener('touchmove', cancelPress, { passive: true });
+    mapContainer.addEventListener('mousemove', cancelPress);
+
+    const wrapper = document.getElementById('filterWrapper'); const tab = document.getElementById('filterTab');
     let isDragging = false, startY = 0, initialTop = 0, moved = false;
-    window.toggleFilter = () => wrapper.classList.toggle('active');
+    window.toggleFilter = () => { wrapper.classList.toggle('active'); if (wrapper.classList.contains('active')) { map.flyTo([centerLat, centerLng], window.innerWidth < 600 ? 13.2 : 14, { animate: true, duration: 1.2 }); } };
     const onStart = (e) => { isDragging = true; moved = false; startY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY; initialTop = wrapper.offsetTop; wrapper.style.transition = 'none'; };
     const onMove = (e) => { if (!isDragging) return; const curY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY; const diff = curY - startY; if (Math.abs(diff) > 5) moved = true; wrapper.style.top = (initialTop + diff) + 'px'; };
     const onEnd = () => { if (!isDragging) return; isDragging = false; wrapper.style.transition = 'transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1)'; if (!moved) toggleFilter(); };
-    tab.addEventListener('mousedown', onStart); tab.addEventListener('touchstart', onStart);
+    tab.addEventListener('mousedown', onStart); tab.addEventListener('touchstart', onStart, {passive: true});
     document.addEventListener('mousemove', onMove); document.addEventListener('touchmove', onMove, {passive: false});
     document.addEventListener('mouseup', onEnd); document.addEventListener('touchend', onEnd);
 
-    // --- ✨ 復活：放大檢視連續播放 ---
-    window.openLightbox = (photosJson) => {
-        currentPhotoList = JSON.parse(decodeURIComponent(photosJson));
-        currentPhotoIdx = 0;
-        document.getElementById('lightboxImg').src = currentPhotoList[currentPhotoIdx];
-        document.getElementById('lightbox').style.display = 'flex';
+    window.openLightbox = (photosJson, actId) => {
+        currentPhotoList = JSON.parse(decodeURIComponent(photosJson)); currentPhotoIdx = 0; lightboxViewCount = 0; currentLightboxActId = actId; 
+        document.getElementById('lightboxImg').src = currentPhotoList[currentPhotoIdx]; document.getElementById('lightbox').style.display = 'flex';
     };
+    
     window.nextLightboxPhoto = (e) => {
-        e.stopPropagation(); // 防止點擊圖片時觸發背景的關閉事件
-        currentPhotoIdx = (currentPhotoIdx + 1) % currentPhotoList.length;
-        document.getElementById('lightboxImg').src = currentPhotoList[currentPhotoIdx];
+        e.stopPropagation(); currentPhotoIdx = (currentPhotoIdx + 1) % currentPhotoList.length; document.getElementById('lightboxImg').src = currentPhotoList[currentPhotoIdx];
+        lightboxViewCount++;
+        if (lightboxViewCount > 0 && lightboxViewCount % 10 === 0) {
+            const act = allActivities.find(a => a.id === currentLightboxActId);
+            const customMsg = (act && act.customMessage) ? act.customMessage : null;
+            const customImg = (act && act.customImage) ? act.customImage : null;
+            triggerEgg(true, true, true, customMsg, customImg); 
+        }
     };
     window.closeLightbox = (e) => { if (e.target.id === "lightbox") document.getElementById('lightbox').style.display = 'none'; };
 
-    // --- ✨ 復活：點擊弄亂與彩蛋 ---
     window.scramblePhotos = function(id) {
-        scrambleCount++; triggerEgg(); stopCycle();
+        scrambleCount++; 
+        const act = allActivities.find(a => a.id === id);
+        const customMsg = (act && act.customMessage) ? act.customMessage : null;
+        const customImg = (act && act.customImage) ? act.customImage : null;
+        triggerEgg(false, false, false, customMsg, customImg); 
+        stopCycle();
         const container = document.getElementById(`stack-${id}`), photos = container.querySelectorAll('.stack-photo');
-        photos.forEach(p => {
-            p.classList.remove('active');
-            const rot = (Math.random()*120)-60, tx = (Math.random()*140)-70, ty = (Math.random()*140)-70;
-            p.style.transform = `rotate(${rot}deg) translate(${tx}px, ${ty}px) scale(0.8)`;
-        });
-        clearTimeout(resumeTimer);
-        resumeTimer = setTimeout(() => {
-            photos.forEach(p => { p.style.transform = `rotate(${p.dataset.tidyRot}deg) translate(${p.dataset.tidyTx}px, ${p.dataset.tidyTy}px) scale(1)`; });
-            startCycle(container);
-        }, 3000);
+        photos.forEach(p => { p.classList.remove('active'); const rot = (Math.random()*120)-60, tx = (Math.random()*140)-70, ty = (Math.random()*140)-70; p.style.transform = `rotate(${rot}deg) translate(${tx}px, ${ty}px) scale(0.8)`; });
+        clearTimeout(resumeTimer); resumeTimer = setTimeout(() => { photos.forEach(p => { p.style.transform = `rotate(${p.dataset.tidyRot}deg) translate(${p.dataset.tidyTx}px, ${p.dataset.tidyTy}px) scale(1)`; }); startCycle(container); }, 3000);
     };
 
-    function startCycle(container) {
-        stopCycle(); const photos = Array.from(container.querySelectorAll('.stack-photo'));
-        if (photos.length < 2) return;
-        cycleTimer = setInterval(() => { photos.forEach(p => p.classList.remove('active')); stackIdx = (stackIdx + 1) % photos.length; photos[stackIdx].classList.add('active'); }, 2000);
-    }
+    function startCycle(container) { stopCycle(); const photos = Array.from(container.querySelectorAll('.stack-photo')); if (photos.length < 2) return; cycleTimer = setInterval(() => { photos.forEach(p => p.classList.remove('active')); stackIdx = (stackIdx + 1) % photos.length; photos[stackIdx].classList.add('active'); }, 2000); }
     function stopCycle() { if(cycleTimer) clearInterval(cycleTimer); }
 
-    function triggerEgg() {
-        if(scrambleCount % 10 !== 0) return;
+    const fixedEggMessage = `<div style="text-align:center;"><div class="breathe-text" style="color:#FF4081; font-size:55px; font-weight:bold; text-shadow: 0 0 15px white; margin-bottom:10px;">中和陳怡君</div><div style="color:#00C1B6; font-size:40px; font-weight:bold; text-shadow: 0 0 10px white; white-space:nowrap;">✨幸福怡起拚✨</div></div>`;
+    const eggMessages = [
+        '<div style="background:white; padding:20px 30px; border-radius:15px; border:3px solid #00C1B6; box-shadow: 0 5px 15px rgba(0,0,0,0.2);"><h2 style="color:#00C1B6; margin:0 0 10px 0;">👋 嗨！中和的朋友！</h2><p style="color:#666; margin:0; font-weight:bold;">感謝你關注怡君的活動紀錄～</p></div>',
+        '<div style="background:#FFF3E0; padding:20px 30px; border-radius:15px; box-shadow:0 5px 15px rgba(0,0,0,0.2);"><h2 style="color:#E65100; margin:0 0 10px 0;">💡 怡君小叮嚀</h2><p style="color:#555; margin:0; font-weight:bold;">最近天氣多變化，出門記得多帶件外套喔！</p></div>',
+        '<div style="background:#E1F5FE; padding:20px 30px; border-radius:15px; box-shadow:0 5px 15px rgba(0,0,0,0.2);"><h2 style="color:#0277BD; margin:0 0 10px 0;">📢 交通政見報你知</h2><p style="color:#333; margin:0; font-weight:bold;">推動人行道平整計畫，讓長輩推車更安心！</p></div>'
+    ];
+
+    let eggTimer = null;
+    
+    function triggerEgg(force = false, isShort = false, useRandom = true, customMsg = null, customImg = null) {
+        if(!force && scrambleCount % 10 !== 0) return;
         const overlay = document.getElementById('eggOverlay');
+        const content = document.getElementById('eggContent');
+        
+        if (customImg || customMsg) {
+            let html = '<div style="background:white; padding:15px 20px; border-radius:15px; border:3px solid #FF4081; box-shadow: 0 5px 20px rgba(0,0,0,0.3); text-align:center; max-width:85vw; max-height:80vh; overflow-y:auto; overflow-x:hidden;">';
+            if (customImg) {
+                html += `<img src="${customImg}" style="max-width:100%; max-height:45vh; border-radius:10px; margin-bottom:10px; object-fit:contain; box-shadow:0 2px 8px rgba(0,0,0,0.1);">`;
+            }
+            if (customMsg) {
+                html += `<h2 style="color:#FF4081; margin:0 0 5px 0; font-size:20px;">✨ 怡君悄悄話</h2>`;
+                html += `<p style="color:#555; margin:0; font-weight:bold; font-size:16px; line-height:1.4;">${customMsg}</p>`;
+            }
+            html += '</div>';
+            content.innerHTML = html;
+        } else if (useRandom) {
+            content.innerHTML = eggMessages[Math.floor(Math.random() * eggMessages.length)];
+        } else {
+            content.innerHTML = fixedEggMessage;
+        }
+
         overlay.style.display = 'flex';
+        overlay.style.opacity = '1';
+        
+        overlay.querySelectorAll('.confetti').forEach(el => el.remove());
         const spawn = () => {
-            for(let i=0; i<35; i++) {
+            const particleCount = isShort ? 15 : 35; 
+            for(let i=0; i<particleCount; i++) {
                 const c = document.createElement('div'); c.className = 'confetti'; 
                 c.innerHTML = ['💖','✨','🌸','🎀'][Math.floor(Math.random()*4)];
                 c.style.left = Math.random()*100+'vw'; c.style.animationDuration = (Math.random()*3+2.5)+'s';
                 overlay.appendChild(c);
             }
         };
-        spawn(); setTimeout(spawn, 2200);
-        setTimeout(() => { overlay.style.display = 'none'; overlay.querySelectorAll('.confetti').forEach(el => el.remove()); }, 5000);
+        spawn(); 
+        if(!isShort) setTimeout(spawn, 2200); 
+
+        const hasCustomContent = customImg || customMsg;
+        let baseDuration = isShort ? 1500 : 4500;
+        if (hasCustomContent && isShort) baseDuration += 1000; 
+        if (hasCustomContent && !isShort) baseDuration += 1500; 
+
+        clearTimeout(eggTimer);
+        eggTimer = setTimeout(() => { 
+            overlay.style.opacity = '0'; 
+            setTimeout(() => overlay.style.display = 'none', 300); 
+            overlay.querySelectorAll('.confetti').forEach(el => el.remove()); 
+        }, baseDuration);
     }
 
     async function load() {
@@ -221,26 +236,21 @@
         const monthSelect = document.getElementById('filterMonth');
         const months = new Set();
         allActivities.forEach(d => { if (d.activityDate) months.add(d.activityDate.substring(0, 7)); });
-        Array.from(months).sort().reverse().forEach(m => {
-            const opt = document.createElement('option'); opt.value = m; opt.text = `${m.split('-')[0]}年${m.split('-')[1]}月`;
-            monthSelect.add(opt);
-        });
+        Array.from(months).sort().reverse().forEach(m => { const opt = document.createElement('option'); opt.value = m; opt.text = `${m.split('-')[0]}年${m.split('-')[1]}月`; monthSelect.add(opt); });
         apply();
     }
 
     function apply() {
         Object.values(markers).forEach(m => map.removeLayer(m));
+        markers = {}; 
+
         const search = document.getElementById('searchName').value.toLowerCase();
         const dist = document.getElementById('filterDist').value;
         const month = document.getElementById('filterMonth').value;
 
         allActivities.forEach(d => {
             if (d.activityName.toLowerCase().includes(search) && (dist === 'all' || d.district === dist) && (month === 'all' || d.activityDate.startsWith(month))) {
-                const icon = L.divIcon({ 
-                    className: '', 
-                    html: `<div class="photo-marker"><div class="marker-label">${d.activityName}</div><div class="marker-photo-wrap"><img src="${d.photos[0]}"></div></div>`, 
-                    iconSize: [50, 60], iconAnchor: [25, 60] 
-                });
+                const icon = L.divIcon({ className: '', html: `<div class="photo-marker"><div class="marker-label">${d.activityName}</div><div class="marker-photo-wrap"><img src="${d.photos[0]}"></div></div>`, iconSize: [50, 60], iconAnchor: [25, 60] });
                 
                 let gallery = `<div class="photo-stack-container" id="stack-${d.id}">`;
                 d.photos.forEach((url, idx) => {
@@ -257,7 +267,7 @@
                         <div class="popup-btn-wrap">
                             <button class="popup-btn" onclick="alert('建置中...')">🖼️ 相簿</button>
                             <button class="popup-btn btn-video" onclick="alert('建置中...')">🎥 影片</button>
-                            <button class="popup-btn btn-zoom" onclick="openLightbox('${encodeURIComponent(JSON.stringify(d.photos))}')">🔍 放大</button>
+                            <button class="popup-btn btn-zoom" onclick="openLightbox('${encodeURIComponent(JSON.stringify(d.photos))}', '${d.id}')">🔍 放大</button>
                         </div>
                     </div>`;
 

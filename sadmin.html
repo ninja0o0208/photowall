@@ -9,26 +9,21 @@
     <style>
         body { margin: 0; padding: 0; font-family: '微軟正黑體', sans-serif; display: flex; height: 100vh; background: #f4f7f6; overflow: hidden; }
         
-        /* 左側列表管理區 */
         #sidebar { width: 400px; height: 100%; overflow-y: auto; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.1); z-index: 100; display: flex; flex-direction: column; transition: 0.3s; }
         .sidebar-header { padding: 15px; background: #fff; border-bottom: 2px solid #00C1B6; position: sticky; top: 0; z-index: 10; }
         
-        /* 地圖區 */
         #map { flex: 1; height: 100%; z-index: 1; }
 
-        /* 活動卡片樣式 */
         .activity-card { border: 2px solid #eee; margin: 12px; padding: 12px; border-radius: 12px; background: #fff; cursor: pointer; }
         .activity-card.active { border-color: #00C1B6; background: #f0fdfa; }
         .card-header { display: flex; justify-content: space-between; margin-bottom: 5px; align-items: center; }
         .card-title { font-weight: bold; color: #333; font-size: 15px; }
         
-        /* 照片管理縮圖 */
         .admin-photo-grid { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
         .admin-photo-item { position: relative; width: 60px; height: 60px; border-radius: 5px; overflow: hidden; border: 1px solid #ddd; }
         .admin-photo-item img { width: 100%; height: 100%; object-fit: cover; }
         .photo-del-btn { position: absolute; top: 0; right: 0; background: red; color: white; width: 18px; height: 18px; text-align: center; line-height: 16px; font-size: 12px; cursor: pointer; font-weight: bold; border-radius: 0 0 0 5px; }
 
-        /* 按鈕樣式 */
         .btn-group { display: flex; gap: 5px; margin-top: 8px; flex-wrap: wrap; }
         .btn { padding: 8px 10px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; flex: 1; text-align: center; }
         .btn-edit { background: #e0f2f1; color: #00796b; }
@@ -36,13 +31,8 @@
         .btn-add-photo { background: #fff3e0; color: #e65100; position: relative; }
         .btn-add-photo input { position: absolute; left: 0; top: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
 
-        /* ✨ 關鍵修正：浮動篩選面板 (確保 z-index 最高) */
         #filterWrapper { position: absolute; top: 15px; right: 15px; z-index: 2000; touch-action: none; }
-        #filterPanel { 
-            background: rgba(255, 255, 255, 0.98); 
-            padding: 12px; border-radius: 12px; width: 200px; 
-            box-shadow: 0 4px 25px rgba(0,0,0,0.2); border: 1px solid #ddd; 
-        }
+        #filterPanel { background: rgba(255, 255, 255, 0.98); padding: 12px; border-radius: 12px; width: 200px; box-shadow: 0 4px 25px rgba(0,0,0,0.2); border: 1px solid #ddd; }
         .drag-handle { cursor: move; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 6px; margin-bottom: 8px; color: #00C1B6; font-weight: bold; font-size: 14px; }
         .toggle-btn { cursor: pointer; border: none; background: #00C1B6; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; }
         .filter-content.hidden { display: none; }
@@ -50,17 +40,11 @@
         .filter-item label { font-size: 11px; color: #777; font-weight: bold; display: block; margin-bottom: 2px; }
         select, input[type="text"] { width: 100%; padding: 6px; border-radius: 5px; border: 1px solid #ddd; font-size: 13px; box-sizing: border-box; }
 
-        /* 手機版排版調整 */
-        @media (max-width: 768px) {
-            body { flex-direction: column; }
-            #sidebar { width: 100%; height: 45vh; }
-            #map { flex: 1; }
-            #filterPanel { width: 160px; }
-        }
+        @media (max-width: 768px) { body { flex-direction: column; } #sidebar { width: 100%; height: 45vh; } #map { flex: 1; } #filterPanel { width: 160px; } }
 
-        /* 編輯 Modal */
         #editModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 3000; justify-content: center; align-items: center; }
-        .modal-body { background: white; padding: 20px; border-radius: 15px; width: 320px; }
+        .modal-body { background: white; padding: 20px; border-radius: 15px; width: 320px; box-shadow: 0 5px 25px rgba(0,0,0,0.2); }
+        .modal-body input[type="text"], .modal-body input[type="date"] { margin-bottom: 10px; width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 5px;}
     </style>
 </head>
 <body>
@@ -78,7 +62,7 @@
 <div id="filterWrapper">
     <div id="filterPanel">
         <div class="drag-handle" id="dragHandle">
-            <span>活動篩選</span>
+            <span>活動管理與地圖</span>
             <button class="toggle-btn" id="toggleBtn" onclick="toggleFilter()">隱藏</button>
         </div>
         <div class="filter-content" id="filterContent">
@@ -92,7 +76,17 @@
                     <option value="南勢">南勢分區</option><option value="秀安">秀安分區</option>
                 </select>
             </div>
-            <button class="btn btn-edit" onclick="location.href='input.html'" style="width:100%; margin-top:5px;">＋ 建立新活動</button>
+            <div class="filter-item">
+                <label>地圖風格切換</label>
+                <select id="mapStyleSelect" onchange="changeMapStyle(this.value)">
+                    <option value="0">🗺️ 乾淨街道 (預設)</option>
+                    <option value="1">🛰️ 衛星影像</option>
+                    <option value="2">✨ 最簡單地圖</option>
+                    <option value="3">🌍 標準街道</option>
+                    <option value="4">🌙 深色模式</option>
+                </select>
+            </div>
+            <button class="btn btn-edit" onclick="location.href='input.html'" style="width:100%; margin-top:5px; background:#FFB6C1; color:#333;">＋ 建立新活動</button>
         </div>
     </div>
 </div>
@@ -101,11 +95,22 @@
     <div class="modal-body">
         <h3 style="margin-top:0;">✏️ 修改活動資訊</h3>
         <input type="hidden" id="editId">
-        <label style="font-size:12px;">名稱</label><input type="text" id="editName">
-        <label style="font-size:12px;">日期</label><input type="date" id="editDate">
+        <label style="font-size:12px; font-weight:bold;">活動名稱</label><input type="text" id="editName">
+        <label style="font-size:12px; font-weight:bold;">活動日期</label><input type="date" id="editDate">
+        
+        <label style="font-size:12px; color:#FF4081; font-weight:bold;">專屬彩蛋文字 (空白代表用預設)</label>
+        <input type="text" id="editCustomMsg" placeholder="例如：感謝大家支持">
+        
+        <label style="font-size:12px; color:#FF4081; font-weight:bold;">上傳新彩蛋宣傳圖 (選填)</label>
+        <div style="display:flex; gap:5px; margin-bottom:10px; align-items:center;">
+            <input type="file" id="editCustomImgFile" accept="image/*" style="flex:1; font-size:12px;">
+            <button onclick="clearEggImage()" style="font-size:11px; padding:6px; border:none; border-radius:4px; background:#ffcccc; color:red; cursor:pointer; font-weight:bold;">清空圖片</button>
+        </div>
+        <input type="hidden" id="editCustomImgUrl">
+        
         <div class="btn-group">
-            <button class="btn btn-edit" onclick="saveEdit()">儲存</button>
-            <button class="btn" onclick="closeModal()">取消</button>
+            <button id="btnSaveEdit" class="btn btn-edit" onclick="saveEdit()" style="background:#00C1B6; color:white;">儲存</button>
+            <button class="btn" onclick="closeModal()" style="background:#eee; color:#333;">取消</button>
         </div>
     </div>
 </div>
@@ -124,46 +129,36 @@
     const GAS_URL = "https://script.google.com/macros/s/AKfycbwYyBynFBdv-pnAGYl854tsQR8BJWoagBbiB3acjtd9zs2zAt-AcY-gzM8RBkaXumHd/exec";
 
     let map = L.map('map', { zoomControl: false }).setView([24.993, 121.496], 14);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
+    
+    // ✨ 修改：最新順序的地圖
+    const mapTiles = [
+        'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', 
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', 
+        'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', 
+        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+        'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' 
+    ];
+    let baseLayer = L.tileLayer(mapTiles[0]).addTo(map);
+    window.changeMapStyle = (idx) => { baseLayer.setUrl(mapTiles[parseInt(idx)]); };
 
     let allData = [], markers = {}, selectedId = null;
 
-    // ✨ 修正：增加手機觸控支援
     const wrapper = document.getElementById('filterWrapper');
     const handle = document.getElementById('dragHandle');
     let isMoving = false, offset = [0,0];
-
-    const start = (e) => {
-        isMoving = true;
-        const x = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
-        const y = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
-        offset = [wrapper.offsetLeft - x, wrapper.offsetTop - y];
-    };
-    const move = (e) => {
-        if(!isMoving) return;
-        const x = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
-        const y = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
-        wrapper.style.left = (x + offset[0]) + 'px';
-        wrapper.style.top = (y + offset[1]) + 'px';
-        wrapper.style.right = 'auto';
-    };
-    handle.addEventListener('mousedown', start);
-    handle.addEventListener('touchstart', start);
-    document.addEventListener('mousemove', move);
-    document.addEventListener('touchmove', move, {passive: false});
-    document.addEventListener('mouseup', () => isMoving = false);
-    document.addEventListener('touchend', () => isMoving = false);
+    const start = (e) => { isMoving = true; const x = e.type.includes('touch') ? e.touches[0].clientX : e.clientX; const y = e.type.includes('touch') ? e.touches[0].clientY : e.clientY; offset = [wrapper.offsetLeft - x, wrapper.offsetTop - y]; };
+    const move = (e) => { if(!isMoving) return; const x = e.type.includes('touch') ? e.touches[0].clientX : e.clientX; const y = e.type.includes('touch') ? e.touches[0].clientY : e.clientY; wrapper.style.left = (x + offset[0]) + 'px'; wrapper.style.top = (y + offset[1]) + 'px'; wrapper.style.right = 'auto'; };
+    handle.addEventListener('mousedown', start); handle.addEventListener('touchstart', start, {passive:true});
+    document.addEventListener('mousemove', move); document.addEventListener('touchmove', move, {passive: false});
+    document.addEventListener('mouseup', () => isMoving = false); document.addEventListener('touchend', () => isMoving = false);
 
     window.toggleFilter = () => {
         const content = document.getElementById('filterContent');
-        const btn = document.getElementById('toggleBtn');
         content.classList.toggle('hidden');
-        btn.innerText = content.classList.contains('hidden') ? "展開" : "隱藏";
+        document.getElementById('toggleBtn').innerText = content.classList.contains('hidden') ? "展開" : "隱藏";
     };
+    if(window.innerWidth < 600) toggleFilter();
 
-    if(window.innerWidth < 600) toggleFilter(); // 手機版預設收起
-
-    // --- 資料同步邏輯 ---
     async function loadAll() {
         const snap = await getDocs(query(collection(db, "yichun_activities"), orderBy("activityDate", "desc")));
         allData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -173,11 +168,7 @@
         allData.forEach(d => { if (d.activityDate) months.add(d.activityDate.substring(0, 7)); });
         const sorted = Array.from(months).sort().reverse();
         monthSelect.innerHTML = '<option value="all">所有月份</option>';
-        sorted.forEach(m => {
-            const opt = document.createElement('option');
-            opt.value = m; opt.text = `${m.split('-')[0]}年${m.split('-')[1]}月`;
-            monthSelect.add(opt);
-        });
+        sorted.forEach(m => { const opt = document.createElement('option'); opt.value = m; opt.text = `${m.split('-')[0]}年${m.split('-')[1]}月`; monthSelect.add(opt); });
         render();
     }
 
@@ -197,13 +188,17 @@
                 card.className = `activity-card ${selectedId === d.id ? 'active' : ''}`;
                 card.onclick = () => { selectedId = d.id; render(); map.flyTo([d.lat, d.lng], 17); m.openPopup(); };
                 let photos = (d.photos || []).map(url => `<div class="admin-photo-item"><img src="${url}"><div class="photo-del-btn" onclick="delPhoto('${d.id}', '${url}')">×</div></div>`).join('');
+                
+                const safeMsg = d.customMessage ? d.customMessage.replace(/'/g, "\\'") : '';
+                const safeImg = d.customImage ? d.customImage.replace(/'/g, "\\'") : '';
+
                 card.innerHTML = `
                     <div class="card-header"><span class="card-title">${d.activityName}</span><span style="font-size:11px; color:#999;">${d.activityDate}</span></div>
-                    <div style="font-size:11px; color:#666;">📍 ${d.district || ''}${d.village || ''}</div>
+                    <div style="font-size:11px; color:#666;">📍 ${d.district || ''}${d.village || ''} ${d.customImage || d.customMessage ? '✨(有彩蛋)' : ''}</div>
                     <div class="admin-photo-grid">${photos}</div>
                     <div class="btn-group">
-                        <div class="btn btn-add-photo">📷 補照片<input type="file" multiple onchange="appendPhotos('${d.id}', '${d.activityName}', this)"></div>
-                        <button class="btn btn-edit" onclick="openEdit('${d.id}', '${d.activityName}', '${d.activityDate}')">修改</button>
+                        <div class="btn btn-add-photo">📷 補照<input type="file" multiple onchange="appendPhotos('${d.id}', '${d.activityName}', this)"></div>
+                        <button class="btn btn-edit" onclick="openEdit('${d.id}', '${d.activityName}', '${d.activityDate}', '${safeMsg}', '${safeImg}')">修改</button>
                         <button class="btn btn-del" onclick="delAct('${d.id}')">刪除</button>
                     </div>`;
                 list.appendChild(card);
@@ -211,7 +206,6 @@
         });
     }
 
-    // --- 功能函式 (壓縮/補傳/更新座標/刪除) ---
     const compress = (file) => new Promise(res => {
         const reader = new FileReader(); reader.readAsDataURL(file);
         reader.onload = e => {
@@ -219,8 +213,7 @@
             img.onload = () => {
                 const cvs = document.createElement('canvas'); const scale = Math.min(1, 1024/img.width);
                 cvs.width = img.width*scale; cvs.height = img.height*scale;
-                cvs.getContext('2d').drawImage(img,0,0,cvs.width,cvs.height);
-                res(cvs.toDataURL('image/jpeg', 0.8));
+                cvs.getContext('2d').drawImage(img,0,0,cvs.width,cvs.height); res(cvs.toDataURL('image/jpeg', 0.8));
             };
         };
     });
@@ -233,10 +226,7 @@
             let pArr = []; for(let i=0; i<files.length; i++) pArr.push(await compress(files[i]));
             const gasRes = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ activityName: actName, photos: pArr }) });
             const gasData = await gasRes.json();
-            if(gasData.status === "success") {
-                await updateDoc(doc(db, "yichun_activities", id), { photos: arrayUnion(...gasData.urls) });
-                alert("✨ 補傳成功！"); loadAll();
-            }
+            if(gasData.status === "success") { await updateDoc(doc(db, "yichun_activities", id), { photos: arrayUnion(...gasData.urls) }); alert("✨ 補傳成功！"); loadAll(); }
         } catch(e) { alert("❌ 失敗：" + e.message); loadAll(); }
     };
 
@@ -255,9 +245,54 @@
 
     window.delPhoto = async (id, url) => { event.stopPropagation(); if(confirm("刪除照片？")) { await updateDoc(doc(db, "yichun_activities", id), { photos: arrayRemove(url) }); loadAll(); } };
     window.delAct = async (id) => { event.stopPropagation(); if(confirm("刪除整筆？")) { await deleteDoc(doc(db, "yichun_activities", id)); loadAll(); } };
-    window.openEdit = (id, n, d) => { event.stopPropagation(); document.getElementById('editId').value = id; document.getElementById('editName').value = n; document.getElementById('editDate').value = d; document.getElementById('editModal').style.display = 'flex'; };
+    
+    // ✨ 修改：支援彩蛋圖片編輯
+    window.openEdit = (id, n, d, cMsg, cImg) => { 
+        event.stopPropagation(); 
+        document.getElementById('editId').value = id; 
+        document.getElementById('editName').value = n; 
+        document.getElementById('editDate').value = d; 
+        document.getElementById('editCustomMsg').value = cMsg === 'undefined' ? '' : cMsg; 
+        document.getElementById('editCustomImgUrl').value = cImg === 'undefined' ? '' : cImg; 
+        document.getElementById('editCustomImgFile').value = ''; // 清空選擇檔案欄位
+        document.getElementById('editModal').style.display = 'flex'; 
+    };
+    
+    // ✨ 清除彩蛋宣傳圖的按鈕功能
+    window.clearEggImage = () => {
+        document.getElementById('editCustomImgUrl').value = "";
+        document.getElementById('editCustomImgFile').value = "";
+        alert("宣傳圖已標記為移除，請點擊「儲存」生效。");
+    };
+
     window.closeModal = () => document.getElementById('editModal').style.display = 'none';
-    window.saveEdit = async () => { const id = document.getElementById('editId').value; await updateDoc(doc(db, "yichun_activities", id), { activityName: document.getElementById('editName').value, activityDate: document.getElementById('editDate').value }); closeModal(); loadAll(); };
+    
+    window.saveEdit = async () => { 
+        const id = document.getElementById('editId').value; 
+        const btn = document.getElementById('btnSaveEdit');
+        btn.innerText = "⏳ 儲存中..."; btn.disabled = true;
+
+        let finalCustomImg = document.getElementById('editCustomImgUrl').value;
+        const eggFile = document.getElementById('editCustomImgFile').files[0];
+        
+        // 如果有選新檔案，上傳新圖並覆蓋網址
+        if (eggFile) {
+            const eggBase64 = await compress(eggFile);
+            const eggRes = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ activityName: document.getElementById('editName').value + "_宣傳圖", photos: [eggBase64] }) });
+            const eggData = await eggRes.json();
+            if (eggData.status === "success") finalCustomImg = eggData.urls[0];
+        }
+
+        await updateDoc(doc(db, "yichun_activities", id), { 
+            activityName: document.getElementById('editName').value, 
+            activityDate: document.getElementById('editDate').value,
+            customMessage: document.getElementById('editCustomMsg').value.trim(),
+            customImage: finalCustomImg
+        }); 
+        
+        btn.innerText = "儲存"; btn.disabled = false;
+        closeModal(); loadAll(); 
+    };
 
     document.getElementById('searchName').oninput = render;
     document.getElementById('filterDist').onchange = render;
