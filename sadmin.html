@@ -187,19 +187,20 @@
                 card.className = `activity-card ${selectedId === d.id ? 'active' : ''}`;
                 card.onclick = () => { selectedId = d.id; render(); map.flyTo([d.lat, d.lng], 17); m.openPopup(); };
                 
-                // ✨ 將 event 傳入以修復按鈕報錯問題
-                let photos = (d.photos || []).map(url => `<div class="admin-photo-item"><img src="${url}"><div class="photo-del-btn" onclick="delPhoto(event, '${d.id}', '${url}')">×</div></div>`).join('');
-                
-                const safeMsg = d.customMessage ? d.customMessage.replace(/'/g, "\\'") : '';
-                const safeImg = d.customImage ? d.customImage.replace(/'/g, "\\'") : '';
+                // ✨ 將所有可能包含符號的文字，都透過 encodeURIComponent 安全加密打包
+                const encName = encodeURIComponent(d.activityName || '');
+                const encMsg = encodeURIComponent(d.customMessage || '');
+                const encImg = encodeURIComponent(d.customImage || '');
 
+                let photos = (d.photos || []).map(url => `<div class="admin-photo-item"><img src="${url}"><div class="photo-del-btn" onclick="delPhoto(event, '${d.id}', '${encodeURIComponent(url)}')">×</div></div>`).join('');
+                
                 card.innerHTML = `
                     <div class="card-header"><span class="card-title">${d.activityName}</span><span style="font-size:11px; color:#999;">${d.activityDate}</span></div>
                     <div style="font-size:11px; color:#666;">📍 ${d.district || ''}${d.village || ''} ${d.customImage || d.customMessage ? '✨(有彩蛋)' : ''}</div>
                     <div class="admin-photo-grid">${photos}</div>
                     <div class="btn-group">
-                        <div class="btn btn-add-photo">📷 補照<input type="file" multiple onchange="appendPhotos(event, '${d.id}', '${d.activityName}', this)"></div>
-                        <button class="btn btn-edit" onclick="openEdit(event, '${d.id}', '${d.activityName}', '${d.activityDate}', '${safeMsg}', '${safeImg}')">修改</button>
+                        <div class="btn btn-add-photo">📷 補照<input type="file" multiple onchange="appendPhotos(event, '${d.id}', '${encName}', this)"></div>
+                        <button class="btn btn-edit" onclick="openEdit(event, '${d.id}', '${encName}', '${d.activityDate}', '${encMsg}', '${encImg}')">修改</button>
                         <button class="btn btn-del" onclick="delAct(event, '${d.id}')">刪除</button>
                     </div>`;
                 list.appendChild(card);
@@ -219,10 +220,11 @@
         };
     });
 
-    // ✨ 接收 e 並處理 stopPropagation
-    window.appendPhotos = async (e, id, actName, input) => {
+    // ✨ 接收安全加密過的文字並解碼
+    window.appendPhotos = async (e, id, encName, input) => {
         e.stopPropagation();
         const files = input.files; if(files.length === 0) return;
+        const actName = decodeURIComponent(encName);
         input.parentElement.innerText = "⏳ 上傳中...";
         try {
             let pArr = []; for(let i=0; i<files.length; i++) pArr.push(await compress(files[i]));
@@ -245,17 +247,23 @@
         }
     });
 
-    // ✨ 接收 e 並處理 stopPropagation
-    window.delPhoto = async (e, id, url) => { e.stopPropagation(); if(confirm("刪除照片？")) { await updateDoc(doc(db, "yichun_activities", id), { photos: arrayRemove(url) }); loadAll(); } };
+    // ✨ 接收加密過的 URL 並解碼
+    window.delPhoto = async (e, id, encUrl) => { 
+        e.stopPropagation(); 
+        const url = decodeURIComponent(encUrl);
+        if(confirm("刪除照片？")) { await updateDoc(doc(db, "yichun_activities", id), { photos: arrayRemove(url) }); loadAll(); } 
+    };
+    
     window.delAct = async (e, id) => { e.stopPropagation(); if(confirm("刪除整筆？")) { await deleteDoc(doc(db, "yichun_activities", id)); loadAll(); } };
     
-    window.openEdit = (e, id, n, d, cMsg, cImg) => { 
+    // ✨ 接收所有加密過的資訊並解碼顯示
+    window.openEdit = (e, id, encN, d, encMsg, encImg) => { 
         e.stopPropagation(); 
         document.getElementById('editId').value = id; 
-        document.getElementById('editName').value = n; 
+        document.getElementById('editName').value = decodeURIComponent(encN); 
         document.getElementById('editDate').value = d; 
-        document.getElementById('editCustomMsg').value = cMsg === 'undefined' ? '' : cMsg; 
-        document.getElementById('editCustomImgUrl').value = cImg === 'undefined' ? '' : cImg; 
+        document.getElementById('editCustomMsg').value = decodeURIComponent(encMsg); 
+        document.getElementById('editCustomImgUrl').value = decodeURIComponent(encImg); 
         document.getElementById('editCustomImgFile').value = ''; 
         document.getElementById('editModal').style.display = 'flex'; 
     };
