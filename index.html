@@ -63,7 +63,7 @@
 <div id="pageTitle">✨中和怡君活動集錦✨</div>
 
 <div id="filterWrapper">
-    <div id="filterTab" id="dragHandle">🔍 篩選活動</div>
+    <div id="filterTab">🔍 篩選活動</div>
     <div id="filterPanel">
         <div class="filter-item"><label>活動名稱搜尋</label><input type="text" id="searchName" placeholder="輸入關鍵字..."></div>
         <div class="filter-item"><label>按月份篩選</label><select id="filterMonth"><option value="all">所有月份</option></select></div>
@@ -105,13 +105,12 @@
     const initialZoom = window.innerWidth < 600 ? 13.2 : 14;
     var map = L.map('map', { zoomControl: false, attributionControl: false }).setView([centerLat, centerLng], initialZoom);
 
-    // ✨ 修改：依據你的要求設定全新地圖順序
     const mapTiles = [
-        'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', // 1: 乾淨街道 (預設)
-        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', // 2: 衛星地圖
-        'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', // 3: 最簡單的灰白地圖
-        'https://tile.openstreetmap.org/{z}/{x}/{y}.png', // 4: 標準街道
-        'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' // 5: 深色模式
+        'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', 
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', 
+        'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', 
+        'https://tile.openstreetmap.org/{z}/{x}/{y}.png', 
+        'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' 
     ];
     let currentMapIdx = 0;
     let baseLayer = L.tileLayer(mapTiles[0]).addTo(map);
@@ -272,7 +271,14 @@
                     </div>`;
 
                 const m = L.marker([d.lat, d.lng], { icon: icon }).addTo(map).bindPopup(popup);
-                m.on('popupopen', () => { map.panTo([d.lat + 0.002, d.lng]); stackIdx = 0; startCycle(document.getElementById(`stack-${d.id}`)); });
+                
+                // ✨ 這裡加入了 flyTo 動畫縮放機制，並且微調緯度 (+0.001) 防止彈窗被切到
+                m.on('popupopen', () => { 
+                    map.flyTo([d.lat + 0.001, d.lng], 16, { animate: true, duration: 0.8 }); 
+                    stackIdx = 0; 
+                    startCycle(document.getElementById(`stack-${d.id}`)); 
+                });
+                
                 m.on('popupclose', stopCycle);
                 markers[d.id] = m;
             }

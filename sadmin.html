@@ -130,7 +130,6 @@
 
     let map = L.map('map', { zoomControl: false }).setView([24.993, 121.496], 14);
     
-    // ✨ 修改：最新順序的地圖
     const mapTiles = [
         'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', 
         'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', 
@@ -187,7 +186,9 @@
                 const card = document.createElement('div');
                 card.className = `activity-card ${selectedId === d.id ? 'active' : ''}`;
                 card.onclick = () => { selectedId = d.id; render(); map.flyTo([d.lat, d.lng], 17); m.openPopup(); };
-                let photos = (d.photos || []).map(url => `<div class="admin-photo-item"><img src="${url}"><div class="photo-del-btn" onclick="delPhoto('${d.id}', '${url}')">×</div></div>`).join('');
+                
+                // ✨ 將 event 傳入以修復按鈕報錯問題
+                let photos = (d.photos || []).map(url => `<div class="admin-photo-item"><img src="${url}"><div class="photo-del-btn" onclick="delPhoto(event, '${d.id}', '${url}')">×</div></div>`).join('');
                 
                 const safeMsg = d.customMessage ? d.customMessage.replace(/'/g, "\\'") : '';
                 const safeImg = d.customImage ? d.customImage.replace(/'/g, "\\'") : '';
@@ -197,9 +198,9 @@
                     <div style="font-size:11px; color:#666;">📍 ${d.district || ''}${d.village || ''} ${d.customImage || d.customMessage ? '✨(有彩蛋)' : ''}</div>
                     <div class="admin-photo-grid">${photos}</div>
                     <div class="btn-group">
-                        <div class="btn btn-add-photo">📷 補照<input type="file" multiple onchange="appendPhotos('${d.id}', '${d.activityName}', this)"></div>
-                        <button class="btn btn-edit" onclick="openEdit('${d.id}', '${d.activityName}', '${d.activityDate}', '${safeMsg}', '${safeImg}')">修改</button>
-                        <button class="btn btn-del" onclick="delAct('${d.id}')">刪除</button>
+                        <div class="btn btn-add-photo">📷 補照<input type="file" multiple onchange="appendPhotos(event, '${d.id}', '${d.activityName}', this)"></div>
+                        <button class="btn btn-edit" onclick="openEdit(event, '${d.id}', '${d.activityName}', '${d.activityDate}', '${safeMsg}', '${safeImg}')">修改</button>
+                        <button class="btn btn-del" onclick="delAct(event, '${d.id}')">刪除</button>
                     </div>`;
                 list.appendChild(card);
             }
@@ -218,8 +219,9 @@
         };
     });
 
-    window.appendPhotos = async (id, actName, input) => {
-        event.stopPropagation();
+    // ✨ 接收 e 並處理 stopPropagation
+    window.appendPhotos = async (e, id, actName, input) => {
+        e.stopPropagation();
         const files = input.files; if(files.length === 0) return;
         input.parentElement.innerText = "⏳ 上傳中...";
         try {
@@ -227,7 +229,7 @@
             const gasRes = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ activityName: actName, photos: pArr }) });
             const gasData = await gasRes.json();
             if(gasData.status === "success") { await updateDoc(doc(db, "yichun_activities", id), { photos: arrayUnion(...gasData.urls) }); alert("✨ 補傳成功！"); loadAll(); }
-        } catch(e) { alert("❌ 失敗：" + e.message); loadAll(); }
+        } catch(err) { alert("❌ 失敗：" + err.message); loadAll(); }
     };
 
     map.on('click', async (e) => {
@@ -243,22 +245,21 @@
         }
     });
 
-    window.delPhoto = async (id, url) => { event.stopPropagation(); if(confirm("刪除照片？")) { await updateDoc(doc(db, "yichun_activities", id), { photos: arrayRemove(url) }); loadAll(); } };
-    window.delAct = async (id) => { event.stopPropagation(); if(confirm("刪除整筆？")) { await deleteDoc(doc(db, "yichun_activities", id)); loadAll(); } };
+    // ✨ 接收 e 並處理 stopPropagation
+    window.delPhoto = async (e, id, url) => { e.stopPropagation(); if(confirm("刪除照片？")) { await updateDoc(doc(db, "yichun_activities", id), { photos: arrayRemove(url) }); loadAll(); } };
+    window.delAct = async (e, id) => { e.stopPropagation(); if(confirm("刪除整筆？")) { await deleteDoc(doc(db, "yichun_activities", id)); loadAll(); } };
     
-    // ✨ 修改：支援彩蛋圖片編輯
-    window.openEdit = (id, n, d, cMsg, cImg) => { 
-        event.stopPropagation(); 
+    window.openEdit = (e, id, n, d, cMsg, cImg) => { 
+        e.stopPropagation(); 
         document.getElementById('editId').value = id; 
         document.getElementById('editName').value = n; 
         document.getElementById('editDate').value = d; 
         document.getElementById('editCustomMsg').value = cMsg === 'undefined' ? '' : cMsg; 
         document.getElementById('editCustomImgUrl').value = cImg === 'undefined' ? '' : cImg; 
-        document.getElementById('editCustomImgFile').value = ''; // 清空選擇檔案欄位
+        document.getElementById('editCustomImgFile').value = ''; 
         document.getElementById('editModal').style.display = 'flex'; 
     };
     
-    // ✨ 清除彩蛋宣傳圖的按鈕功能
     window.clearEggImage = () => {
         document.getElementById('editCustomImgUrl').value = "";
         document.getElementById('editCustomImgFile').value = "";
@@ -275,7 +276,6 @@
         let finalCustomImg = document.getElementById('editCustomImgUrl').value;
         const eggFile = document.getElementById('editCustomImgFile').files[0];
         
-        // 如果有選新檔案，上傳新圖並覆蓋網址
         if (eggFile) {
             const eggBase64 = await compress(eggFile);
             const eggRes = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ activityName: document.getElementById('editName').value + "_宣傳圖", photos: [eggBase64] }) });
