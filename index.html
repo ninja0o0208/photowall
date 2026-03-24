@@ -105,6 +105,14 @@
     const initialZoom = window.innerWidth < 600 ? 13.2 : 14;
     var map = L.map('map', { zoomControl: false, attributionControl: false }).setView([centerLat, centerLng], initialZoom);
 
+    // ✨ 中和四大分區的大約中心點
+    const districtCenters = {
+        '漳和': [25.0016, 121.5015],
+        '員山': [25.0068, 121.4825],
+        '南勢': [24.9866, 121.5065],
+        '秀安': [24.9926, 121.5175]
+    };
+
     const mapTiles = [
         'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', 
         'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', 
@@ -129,7 +137,15 @@
 
     const wrapper = document.getElementById('filterWrapper'); const tab = document.getElementById('filterTab');
     let isDragging = false, startY = 0, initialTop = 0, moved = false;
-    window.toggleFilter = () => { wrapper.classList.toggle('active'); if (wrapper.classList.contains('active')) { map.flyTo([centerLat, centerLng], window.innerWidth < 600 ? 13.2 : 14, { animate: true, duration: 1.2 }); } };
+    
+    // ✨ 修改：展開選單時，地圖會飛回中和中心點
+    window.toggleFilter = () => { 
+        wrapper.classList.toggle('active'); 
+        if (wrapper.classList.contains('active')) { 
+            map.flyTo([centerLat, centerLng], initialZoom, { animate: true, duration: 1.2 }); 
+        } 
+    };
+
     const onStart = (e) => { isDragging = true; moved = false; startY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY; initialTop = wrapper.offsetTop; wrapper.style.transition = 'none'; };
     const onMove = (e) => { if (!isDragging) return; const curY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY; const diff = curY - startY; if (Math.abs(diff) > 5) moved = true; wrapper.style.top = (initialTop + diff) + 'px'; };
     const onEnd = () => { if (!isDragging) return; isDragging = false; wrapper.style.transition = 'transform 0.4s cubic-bezier(0.165, 0.84, 0.44, 1)'; if (!moved) toggleFilter(); };
@@ -236,12 +252,13 @@
         const months = new Set();
         allActivities.forEach(d => { if (d.activityDate) months.add(d.activityDate.substring(0, 7)); });
         Array.from(months).sort().reverse().forEach(m => { const opt = document.createElement('option'); opt.value = m; opt.text = `${m.split('-')[0]}年${m.split('-')[1]}月`; monthSelect.add(opt); });
-        apply();
+        apply(false); // 初始載入時不要飛行動畫
     }
 
-    function apply() {
+    function apply(animateFly = true) {
         Object.values(markers).forEach(m => map.removeLayer(m));
         markers = {}; 
+        let bounds = []; 
 
         const search = document.getElementById('searchName').value.toLowerCase();
         const dist = document.getElementById('filterDist').value;
@@ -249,14 +266,21 @@
 
         allActivities.forEach(d => {
             if (d.activityName.toLowerCase().includes(search) && (dist === 'all' || d.district === dist) && (month === 'all' || d.activityDate.startsWith(month))) {
-                const icon = L.divIcon({ className: '', html: `<div class="photo-marker"><div class="marker-label">${d.activityName}</div><div class="marker-photo-wrap"><img src="${d.photos[0]}"></div></div>`, iconSize: [50, 60], iconAnchor: [25, 60] });
+                
+                const firstPhoto = (d.photos && d.photos.length > 0) ? d.photos[0] : '';
+                
+                const icon = L.divIcon({ className: '', html: `<div class="photo-marker"><div class="marker-label">${d.activityName}</div><div class="marker-photo-wrap"><img src="${firstPhoto}"></div></div>`, iconSize: [50, 60], iconAnchor: [25, 60] });
                 
                 let gallery = `<div class="photo-stack-container" id="stack-${d.id}">`;
-                d.photos.forEach((url, idx) => {
-                    const rot = (Math.random()*20)-10, sc = 35;
-                    gallery += `<img src="${url}" class="stack-photo" data-tidy-rot="${rot}" data-tidy-tx="${(idx%2?1:-1)*sc}" data-tidy-ty="${(idx<2?1:-1)*sc}" style="transform: rotate(${rot}deg) translate(${(idx%2?1:-1)*sc}px, ${(idx<2?1:-1)*sc}px); z-index: ${idx};" onclick="scramblePhotos('${d.id}')">`;
-                });
+                if (d.photos) {
+                    d.photos.forEach((url, idx) => {
+                        const rot = (Math.random()*20)-10, sc = 35;
+                        gallery += `<img src="${url}" class="stack-photo" data-tidy-rot="${rot}" data-tidy-tx="${(idx%2?1:-1)*sc}" data-tidy-ty="${(idx<2?1:-1)*sc}" style="transform: rotate(${rot}deg) translate(${(idx%2?1:-1)*sc}px, ${(idx<2?1:-1)*sc}px); z-index: ${idx};" onclick="scramblePhotos('${d.id}')">`;
+                    });
+                }
                 gallery += `</div>`;
+
+                const safePhotosJSON = encodeURIComponent(JSON.stringify(d.photos || []));
 
                 const popup = `
                     <div style="text-align:center; min-width:260px;">
@@ -266,28 +290,34 @@
                         <div class="popup-btn-wrap">
                             <button class="popup-btn" onclick="alert('建置中...')">🖼️ 相簿</button>
                             <button class="popup-btn btn-video" onclick="alert('建置中...')">🎥 影片</button>
-                            <button class="popup-btn btn-zoom" onclick="openLightbox('${encodeURIComponent(JSON.stringify(d.photos))}', '${d.id}')">🔍 放大</button>
+                            <button class="popup-btn btn-zoom" onclick="openLightbox('${safePhotosJSON}', '${d.id}')">🔍 放大</button>
                         </div>
                     </div>`;
 
                 const m = L.marker([d.lat, d.lng], { icon: icon }).addTo(map).bindPopup(popup);
-                
-                // ✨ 這裡加入了 flyTo 動畫縮放機制，並且微調緯度 (+0.001) 防止彈窗被切到
-                m.on('popupopen', () => { 
-                    map.flyTo([d.lat + 0.001, d.lng], 16, { animate: true, duration: 0.8 }); 
-                    stackIdx = 0; 
-                    startCycle(document.getElementById(`stack-${d.id}`)); 
-                });
-                
+                m.on('popupopen', () => { map.flyTo([d.lat + 0.001, d.lng], 16, { animate: true, duration: 0.8 }); stackIdx = 0; startCycle(document.getElementById(`stack-${d.id}`)); });
                 m.on('popupclose', stopCycle);
                 markers[d.id] = m;
+                bounds.push([d.lat, d.lng]); 
             }
         });
+
+        if (animateFly) {
+            if (bounds.length > 1) {
+                map.flyToBounds(bounds, { padding: [50, 50], maxZoom: 15, duration: 1.2 });
+            } else if (bounds.length === 1) {
+                map.flyTo(bounds[0], 16, { animate: true, duration: 1.2 });
+            } else if (dist !== 'all' && districtCenters[dist]) {
+                map.flyTo(districtCenters[dist], 15, { animate: true, duration: 1.2 });
+            } else {
+                map.flyTo([centerLat, centerLng], initialZoom, { animate: true, duration: 1.2 });
+            }
+        }
     }
 
-    document.getElementById('searchName').oninput = apply;
-    document.getElementById('filterDist').onchange = apply;
-    document.getElementById('filterMonth').onchange = apply;
+    document.getElementById('searchName').oninput = () => apply(true);
+    document.getElementById('filterDist').onchange = () => apply(true);
+    document.getElementById('filterMonth').onchange = () => apply(true);
     load();
 </script>
 </body>
